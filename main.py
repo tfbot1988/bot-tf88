@@ -203,7 +203,7 @@ async def post_init(app: Application) -> None:
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
-    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+    app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addat", addat))
@@ -211,7 +211,8 @@ def main() -> None:
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
-    log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
+   schedule_all(app)
+log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
