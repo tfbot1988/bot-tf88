@@ -26,9 +26,16 @@ TZ = ZoneInfo(TZ_NAME)
 DATA_FILE = Path(os.getenv("DATA_FILE", "data.json"))
 
 DAY_MAP = {
-    "mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6,
+    "sun": 0,
+    "mon": 1,
+    "tue": 2,
+    "wed": 3,
+    "thu": 4,
+    "fri": 5,
+    "sat": 6,
 }
-DAY_LABEL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+DAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 def load_data() -> Dict[str, Any]:
     if DATA_FILE.exists():
@@ -48,9 +55,9 @@ def normalize_days(days: str) -> List[int]:
     if days == "daily":
         return list(range(7))
     if days == "weekdays":
-        return [0, 1, 2, 3, 4]
+        return [1, 2, 3, 4, 5]
     if days == "weekends":
-        return [5, 6]
+        return [0, 6]
     result = []
     for d in days.split(","):
         d = d.strip().lower()
