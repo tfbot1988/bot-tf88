@@ -210,8 +210,8 @@ def main() -> None:
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
-   schedule_all(app)
-log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
+    schedule_all(app)
+    log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
