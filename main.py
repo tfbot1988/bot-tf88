@@ -197,8 +197,7 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         lines.append(f"{i}. {r['text']} [{','.join(r['times'])} · {days_to_text(r['days'])}]")
     await update.message.reply_text("\n".join(lines))
 
-async def post_init(app: Application) -> None:
-    schedule_all(app)
+
 
 def main() -> None:
     if not TOKEN:
