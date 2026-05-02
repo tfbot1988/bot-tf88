@@ -107,14 +107,12 @@ def schedule_chat(app: Application, chat_id: str) -> None:
     for idx, item in enumerate(reminders, start=1):
         for time_str in item["times"]:
             hh, mm = map(int, time_str.split(":"))
-            for d in item["days"]:
-                app.job_queue.run_daily(
-                    send_reminder,
-                    time=time(hour=hh, minute=mm, tzinfo=TZ),
-                    
-                    data={"chat_id": int(chat_id), "text": item["text"], "days": item["days"]},
-                    name=f"reminder:{chat_id}:{idx}:{time_str}:{d}",
-                )
+            app.job_queue.run_daily(
+                send_reminder,
+                time=time(hour=hh, minute=mm, tzinfo=TZ),
+                data={"chat_id": int(chat_id), "text": item["text"], "days": item["days"]},
+                name=f"reminder:{chat_id}:{idx}:{time_str}",
+            ) 
 
 def schedule_all(app: Application) -> None:
     for chat_id in DATA.get("chats", {}):
