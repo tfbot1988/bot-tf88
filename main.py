@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from pathlib import Path
-from datetime import time
+from datetime import datetime, time
 from zoneinfo import ZoneInfo
 from typing import Dict, List, Any
 
@@ -92,8 +92,10 @@ async def send_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
     job = context.job
     chat_id = job.data["chat_id"]
     text = job.data["text"]
+    today = datetime.now(TZ).weekday()
+    if today not in job.data.get("days", []):
+        return
     await context.bot.send_message(chat_id=chat_id, text=f"⏰ {text}")
-
 def clear_jobs_for_chat(app: Application, chat_id: str) -> None:
     for job in app.job_queue.jobs():
         if job.name.startswith(f"reminder:{chat_id}:"):
@@ -109,8 +111,8 @@ def schedule_chat(app: Application, chat_id: str) -> None:
                 app.job_queue.run_daily(
                     send_reminder,
                     time=time(hour=hh, minute=mm, tzinfo=TZ),
-                    days=(d,),
-                    data={"chat_id": int(chat_id), "text": item["text"]},
+                    
+                    data={"chat_id": int(chat_id), "text": item["text"], "days": item["days"]},
                     name=f"reminder:{chat_id}:{idx}:{time_str}:{d}",
                 )
 
