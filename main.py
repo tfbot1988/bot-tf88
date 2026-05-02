@@ -12,6 +12,8 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 logging.basicConfig(
@@ -229,7 +231,30 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("\n".join(lines))
 
 
+async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not update.message.text:
+        return
 
+    text = update.message.text.strip()
+
+    if not text.upper().startswith("DONE "):
+        return
+
+    body = text[5:].strip()
+
+    if " - " in body:
+        task_name, staff_name = body.split(" - ", 1)
+    else:
+        task_name = body
+        staff_name = update.effective_user.first_name or "Nhân viên"
+
+    task_name = task_name.strip()
+    staff_name = staff_name.strip()
+    now = datetime.now(TZ).strftime("%H:%M")
+
+    await update.message.reply_text(
+        f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -241,7 +266,9 @@ def main() -> None:
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
+    
     log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
