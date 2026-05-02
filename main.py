@@ -23,7 +23,7 @@ log = logging.getLogger("tf-bot-pro")
 TOKEN = os.getenv("BOT_TOKEN")
 TZ_NAME = os.getenv("TZ", "Asia/Ho_Chi_Minh")
 TZ = ZoneInfo(TZ_NAME)
-DATA_FILE = Path(os.getenv("DATA_FILE", "data.json"))
+DATA_FILE = Path(os.getenv("DATA_FILE", "/app/data/data.json"))
 
 DAY_MAP = {
     "sun": 0,
