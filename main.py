@@ -88,37 +88,61 @@ def parse_times(times_str: str) -> List[str]:
         times.append(f"{hh:02d}:{mm:02d}")
     return times
 
-async def send_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
-    job = context.job
-    chat_id = job.data["chat_id"]
-    text = job.data["text"]
-    today = datetime.now(TZ).weekday()
-    if today not in job.data.get("days", []):
-        return
-    await context.bot.send_message(chat_id=chat_id, text=f"⏰ {text}")
+SENT_KEYS = set()
+
+async def check_reminders(context: ContextTypes.DEFAULT_TYPE) -> None:
+    now = datetime.now(TZ)
+    today = now.weekday()
+    current_time = now.strftime("%H:%M")
+    today_key = now.strftime("%Y-%m-%d")
+
+    chats = DATA.get("chats", {})
+
+    for chat_id, reminders in chats.items():
+        for idx, item in enumerate(reminders, start=1):
+            if current_time not in item.get("times", []):
+                continue
+
+            if today not in item.get("days", []):
+                continue
+
+            key = f"{today_key}:{chat_id}:{idx}:{current_time}"
+
+            if key in SENT_KEYS:
+                continue
+
+            SENT_KEYS.add(key)
+
+            await context.bot.send_message(
+                chat_id=int(chat_id),
+                text=f"⏰ {item['text']}"
+            )
+
+    if len(SENT_KEYS) > 2000:
+        SENT_KEYS.clear()
+
+
 def clear_jobs_for_chat(app: Application, chat_id: str) -> None:
-    for job in app.job_queue.jobs():
-        if job.name.startswith(f"reminder:{chat_id}:"):
-            job.schedule_removal()
+    return
+
 
 def schedule_chat(app: Application, chat_id: str) -> None:
-    clear_jobs_for_chat(app, chat_id)
-    reminders = DATA.get("chats", {}).get(chat_id, [])
-    for idx, item in enumerate(reminders, start=1):
-        for time_str in item["times"]:
-            hh, mm = map(int, time_str.split(":"))
-            app.job_queue.run_daily(
-                send_reminder,
-                time=time(hour=hh, minute=mm, tzinfo=TZ),
-                data={"chat_id": int(chat_id), "text": item["text"], "days": item["days"]},
-                name=f"reminder:{chat_id}:{idx}:{time_str}",
-            ) 
+    schedule_all(app)
+
 
 def schedule_all(app: Application) -> None:
-    for chat_id in DATA.get("chats", {}):
-        schedule_chat(app, chat_id)
-    total = sum(len(v) for v in DATA.get("chats", {}).values())
-    log.info("Scheduled %s reminder items across %s chats", total, len(DATA.get("chats", {})))
+    for job in app.job_queue.jobs():
+        if job.name == "check_reminders":
+            job.schedule_removal()
+
+    app.job_queue.run_repeating(
+        check_reminders,
+        interval=30,
+        first=5,
+        name="check_reminders",
+    )
+
+    log.info("Reminder checker started")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
