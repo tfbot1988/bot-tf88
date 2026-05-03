@@ -146,7 +146,7 @@ def schedule_chat(app: Application, chat_id: str) -> None:
 
 def schedule_all(app: Application) -> None:
     for job in app.job_queue.jobs():
-        if job.name == "check_reminders":
+        if job.name in ("check_reminders", "daily_report"):
             job.schedule_removal()
 
     app.job_queue.run_repeating(
@@ -155,7 +155,11 @@ def schedule_all(app: Application) -> None:
         first=5,
         name="check_reminders",
     )
-
+    app.job_queue.run_daily(
+        daily_report,
+        time=time(hour=22, minute=0, tzinfo=TZ),
+        name="daily_report",
+    )
     log.info("Reminder checker started")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -241,6 +245,77 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     for i, r in enumerate(reminders, start=1):
         lines.append(f"{i}. {r['text']} [{','.join(r['times'])} · {days_to_text(r['days'])}]")
     await update.message.reply_text("\n".join(lines))
+    def build_daily_report(chat_id: str):
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+    today = datetime.now(TZ).weekday()
+
+    reminders = DATA.get("chats", {}).get(chat_id, [])
+    done_today = DATA.get("done", {}).get(chat_id, {}).get(today_key, {})
+
+    expected = []
+
+    for item in reminders:
+        text = item.get("text", "")
+
+        if today not in item.get("days", []):
+            continue
+
+        if "DONE " not in text.upper():
+            continue
+
+        done_key = extract_done_key(text)
+
+        if done_key and done_key not in expected:
+            expected.append(done_key)
+
+    if not expected:
+        return None
+
+    lines = ["📊 BÁO CÁO TF HÔM NAY", ""]
+    done_count = 0
+
+    for key in expected:
+        if key in done_today:
+            staff = done_today[key].get("staff", "Nhân viên")
+            done_time = done_today[key].get("time", "--:--")
+            lines.append(f"✅ {key}: {staff} - {done_time}")
+            done_count += 1
+        else:
+            lines.append(f"❌ {key}: Chưa DONE")
+
+    lines.append("")
+    lines.append(f"Hoàn thành: {done_count}/{len(expected)}")
+
+    if done_count < len(expected):
+        lines.append("Nếu có mục ❌, quản lý kiểm tra lại ca hôm nay.")
+
+    return "\n".join(lines)
+
+
+async def report_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    report = build_daily_report(chat_id)
+
+    if not report:
+        await update.message.reply_text("Hôm nay chưa có mục vận hành cần báo cáo.")
+        return
+
+    await update.message.reply_text(report)
+
+
+async def daily_report(context: ContextTypes.DEFAULT_TYPE) -> None:
+    chats = DATA.get("chats", {})
+
+    for chat_id in chats.keys():
+        report = build_daily_report(str(chat_id))
+
+        if not report:
+            continue
+
+        await context.bot.send_message(
+            chat_id=int(chat_id),
+            text=report
+        )
 def extract_done_key(text: str) -> str:
     upper_text = text.upper()
     marker = "DONE "
@@ -315,6 +390,7 @@ def main() -> None:
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
+    app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
     
