@@ -119,20 +119,21 @@ async def check_reminders(context: ContextTypes.DEFAULT_TYPE) -> None:
                 chat_id=int(chat_id),
                 text=f"⏰ {item['text']}"
             )
-            done_key = extract_done_key(item["text"])
+            if "DONE " in item["text"].upper():
+                    done_key = extract_done_key(item["text"])
 
-            context.job_queue.run_once(
-                check_followup,
-                when=15 * 60,
-                data={
-                    "chat_id": int(chat_id),
-                    "task_name": done_key,
-                    "done_key": done_key,
-                },
-                name=f"followup:{chat_id}:{idx}:{current_time}",
-            )
-    if len(SENT_KEYS) > 2000:
-        SENT_KEYS.clear()
+                    context.job_queue.run_once(
+                    check_followup,
+                    when=15 * 60,
+                    data={
+                        "chat_id": int(chat_id),
+                        "task_name": done_key,
+                        "done_key": done_key,
+                    },
+                    name=f"followup:{chat_id}:{idx}:{current_time}",
+                )
+            if len(SENT_KEYS) > 2000:
+                SENT_KEYS.clear()
 
 
 def clear_jobs_for_chat(app: Application, chat_id: str) -> None:
