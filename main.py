@@ -379,7 +379,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(
         f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
     )
-    async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     args = context.args
 
@@ -474,7 +474,7 @@ async def clearshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         DATA["shifts"][chat_id] = {}
         save_data(DATA)
 
-    await update.message.reply_text("✅ Đã xóa lịch ca tuần này.")
+    await update.message.reply_text("✅ Đã xóa lịch ca tuần này.")    
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
