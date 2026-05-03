@@ -119,7 +119,18 @@ async def check_reminders(context: ContextTypes.DEFAULT_TYPE) -> None:
                 chat_id=int(chat_id),
                 text=f"⏰ {item['text']}"
             )
+            done_key = extract_done_key(item["text"])
 
+            context.job_queue.run_once(
+                check_followup,
+                when=15 * 60,
+                data={
+                    "chat_id": int(chat_id),
+                    "task_name": done_key,
+                    "done_key": done_key,
+                },
+                name=f"followup:{chat_id}:{idx}:{current_time}",
+            )
     if len(SENT_KEYS) > 2000:
         SENT_KEYS.clear()
 
@@ -229,8 +240,36 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     for i, r in enumerate(reminders, start=1):
         lines.append(f"{i}. {r['text']} [{','.join(r['times'])} · {days_to_text(r['days'])}]")
     await update.message.reply_text("\n".join(lines))
+def extract_done_key(text: str) -> str:
+    upper_text = text.upper()
+    marker = "DONE "
 
+    if marker not in upper_text:
+        return text.strip().upper()
 
+    start = upper_text.find(marker) + len(marker)
+    tail = text[start:].strip()
+
+    if " - " in tail:
+        tail = tail.split(" - ", 1)[0]
+
+    return tail.strip().upper()
+async def check_followup(context: ContextTypes.DEFAULT_TYPE) -> None:
+    job = context.job
+    chat_id = str(job.data["chat_id"])
+    task_name = job.data["task_name"]
+    done_key = job.data["done_key"]
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+
+    done_today = DATA.get("done", {}).get(chat_id, {}).get(today_key, {})
+
+    if done_key in done_today:
+        return
+
+    await context.bot.send_message(
+        chat_id=int(chat_id),
+        text=f"🔁 Chưa thấy DONE {task_name}.\nNhân viên ca này xác nhận giúp sếp."
+    )
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
         return
@@ -251,7 +290,16 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     task_name = task_name.strip()
     staff_name = staff_name.strip()
     now = datetime.now(TZ).strftime("%H:%M")
+    chat_id = str(update.effective_chat.id)
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+    done_key = task_name.upper()
 
+    DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
+    DATA["done"][chat_id][today_key][done_key] = {
+        "staff": staff_name,
+        "time": now,
+    }
+    save_data(DATA)
     await update.message.reply_text(
         f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
     )
