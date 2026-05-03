@@ -245,7 +245,7 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     for i, r in enumerate(reminders, start=1):
         lines.append(f"{i}. {r['text']} [{','.join(r['times'])} · {days_to_text(r['days'])}]")
     await update.message.reply_text("\n".join(lines))
-    def build_daily_report(chat_id: str):
+def build_daily_report(chat_id: str):
     today_key = datetime.now(TZ).strftime("%Y-%m-%d")
     today = datetime.now(TZ).weekday()
 
@@ -289,7 +289,7 @@ async def now_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if done_count < len(expected):
         lines.append("Nếu có mục ❌, quản lý kiểm tra lại ca hôm nay.")
 
-    return "\n".join(lines)
+    return "\n".join(lines)          
 
 
 async def report_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
