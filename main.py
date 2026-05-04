@@ -369,7 +369,29 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     chat_id = str(update.effective_chat.id)
     today_key = datetime.now(TZ).strftime("%Y-%m-%d")
     done_key = task_name.upper()
+    reminders = DATA.get("chats", {}).get(chat_id, [])
+    today = datetime.now(TZ).weekday()
 
+    expected_keys = []
+    for item in reminders:
+        if today not in item.get("days", []):
+            continue
+
+        reminder_text = item.get("text", "")
+        expected_key = extract_done_key(reminder_text)
+
+        if expected_key:
+            expected_keys.append(expected_key)
+
+    if expected_keys and done_key not in expected_keys:
+        await update.message.reply_text(
+            "❌ Tên việc chưa đúng với lịch nhắc hôm nay.\n\n"
+            "Vui lòng copy đúng phần sau chữ:\n"
+            "Xong reply: DONE ... - Tên\n\n"
+            "Các việc hợp lệ hôm nay:\n"
+            + "\n".join([f"- DONE {key} - Tên" for key in expected_keys])
+        )
+        return
     DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
     DATA["done"][chat_id][today_key][done_key] = {
         "staff": staff_name,
@@ -379,6 +401,102 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(
         f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
     )
+async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    args = context.args
+
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Cách dùng: /shift <ngày> <ca> <tên>\n"
+            "Ví dụ: /shift mon sang Huy\n"
+            "Ngày: mon,tue,wed,thu,fri,sat,sun\n"
+            "Ca: sang hoặc toi"
+        )
+        return
+
+    day = args[0].lower()
+    shift = args[1].lower()
+    staff = " ".join(args[2:]).strip()
+
+    day_names = {
+        "mon": "T2",
+        "tue": "T3",
+        "wed": "T4",
+        "thu": "T5",
+        "fri": "T6",
+        "sat": "T7",
+        "sun": "CN",
+    }
+
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    if day not in day_names:
+        await update.message.reply_text("Ngày chưa đúng. Dùng: mon,tue,wed,thu,fri,sat,sun")
+        return
+
+    if shift not in shift_names:
+        await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
+        return
+
+    DATA.setdefault("shifts", {}).setdefault(chat_id, {}).setdefault(day, {})
+    DATA["shifts"][chat_id][day][shift] = staff
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã xếp lịch: {day_names[day]} - Ca {shift_names[shift]}: {staff}"
+    )
+
+
+async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    shifts = DATA.get("shifts", {}).get(chat_id, {})
+
+    if not shifts:
+        await update.message.reply_text("Chưa có lịch ca. Dùng /shift để xếp lịch.")
+        return
+
+    day_order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    day_names = {
+        "mon": "T2",
+        "tue": "T3",
+        "wed": "T4",
+        "thu": "T5",
+        "fri": "T6",
+        "sat": "T7",
+        "sun": "CN",
+    }
+
+    lines = ["📅 LỊCH CA TUẦN NÀY", ""]
+
+    for day in day_order:
+        day_data = shifts.get(day, {})
+        if not day_data:
+            continue
+
+        lines.append(f"{day_names[day]}:")
+
+        if "sang" in day_data:
+            lines.append(f"  Sáng: {day_data['sang']}")
+
+        if "toi" in day_data:
+            lines.append(f"  Tối: {day_data['toi']}")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))
+
+
+async def clearshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+
+    if "shifts" in DATA and chat_id in DATA["shifts"]:
+        DATA["shifts"][chat_id] = {}
+        save_data(DATA)
+
+    await update.message.reply_text("✅ Đã xóa lịch ca tuần này.")    
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -391,6 +509,9 @@ def main() -> None:
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
     app.add_handler(CommandHandler("report", report_cmd))
+    app.add_handler(CommandHandler("shift", shift_cmd))
+    app.add_handler(CommandHandler("week", week_cmd))
+    app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
     
