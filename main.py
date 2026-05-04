@@ -369,7 +369,29 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     chat_id = str(update.effective_chat.id)
     today_key = datetime.now(TZ).strftime("%Y-%m-%d")
     done_key = task_name.upper()
+    reminders = DATA.get("chats", {}).get(chat_id, [])
+    today = datetime.now(TZ).weekday()
 
+    expected_keys = []
+    for item in reminders:
+        if today not in item.get("days", []):
+            continue
+
+        reminder_text = item.get("text", "")
+        expected_key = extract_done_key(reminder_text)
+
+        if expected_key:
+            expected_keys.append(expected_key)
+
+    if expected_keys and done_key not in expected_keys:
+        await update.message.reply_text(
+            "❌ Tên việc chưa đúng với lịch nhắc hôm nay.\n\n"
+            "Vui lòng copy đúng phần sau chữ:\n"
+            "Xong reply: DONE ... - Tên\n\n"
+            "Các việc hợp lệ hôm nay:\n"
+            + "\n".join([f"- DONE {key} - Tên" for key in expected_keys])
+        )
+        return
     DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
     DATA["done"][chat_id][today_key][done_key] = {
         "staff": staff_name,
