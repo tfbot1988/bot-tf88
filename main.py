@@ -354,7 +354,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     text_upper = text.upper()
 
     if text_upper.startswith("CHECKIN"):
-        staff_name = text.replace("CHECKIN", "", 1).replace("-", "", 1).strip()
+        staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
 
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN - Tên")
@@ -374,7 +374,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text_upper.startswith("CHECKOUT"):
-        staff_name = text.replace("CHECKOUT", "", 1).replace("-", "", 1).strip()
+        staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
 
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT - Tên")
