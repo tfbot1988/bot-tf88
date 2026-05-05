@@ -355,7 +355,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
-
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN - Tên")
             return
@@ -375,7 +381,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
-
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT - Tên")
             return
