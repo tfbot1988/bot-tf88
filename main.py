@@ -537,6 +537,27 @@ async def clearshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         save_data(DATA)
 
     await update.message.reply_text("✅ Đã xóa lịch ca tuần này.")    
+async def todaywork_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+    attendance = DATA.get("attendance", {}).get(chat_id, {}).get(today_key, {})
+
+    if not attendance:
+        await update.message.reply_text("📋 Hôm nay chưa có dữ liệu CHECKIN/CHECKOUT.")
+        return
+
+    lines = ["📋 CHẤM CÔNG HÔM NAY", ""]
+
+    for staff_name, record in attendance.items():
+        checkin = record.get("checkin", "Chưa có")
+        checkout = record.get("checkout", "Chưa có")
+
+        lines.append(f"{staff_name}")
+        lines.append(f"- CHECKIN: {checkin}")
+        lines.append(f"- CHECKOUT: {checkout}")
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -549,6 +570,7 @@ def main() -> None:
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
     app.add_handler(CommandHandler("report", report_cmd))
+    app.add_handler(CommandHandler("todaywork", todaywork_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
