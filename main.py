@@ -346,6 +346,20 @@ async def check_followup(context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id=int(chat_id),
         text=f"🔁 Chưa thấy DONE {task_name}.\nNhân viên ca này xác nhận giúp sếp."
     )
+def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
+    day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    today_key = day_keys[datetime.now(TZ).weekday()]
+
+    today_shifts = DATA.get("shifts", {}).get(chat_id, {}).get(today_key, {})
+
+    if not today_shifts:
+        return False
+
+    for assigned_staff in today_shifts.values():
+        if assigned_staff.strip() == staff_name.strip():
+            return True
+
+    return False    
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
         return
@@ -649,6 +663,71 @@ async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         lines.append(f"{index}. {staff_name}")
 
     await update.message.reply_text("\n".join(lines))
+async def checkshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    day_names = {
+        "mon": "T2",
+        "tue": "T3",
+        "wed": "T4",
+        "thu": "T5",
+        "fri": "T6",
+        "sat": "T7",
+        "sun": "CN",
+    }
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    today_key = day_keys[datetime.now(TZ).weekday()]
+    today_text = day_names.get(today_key, today_key)
+
+    today_shifts = DATA.get("shifts", {}).get(chat_id, {}).get(today_key, {})
+    today_attendance = DATA.get("attendance", {}).get(chat_id, {}).get(
+        datetime.now(TZ).strftime("%Y-%m-%d"), {}
+    )
+
+    lines = [f"📋 KIỂM TRA LỊCH CA HÔM NAY ({today_text})", ""]
+
+    lines.append("🗓 Lịch ca hôm nay:")
+    if today_shifts:
+        scheduled_names = []
+        for shift_key, staff_name in today_shifts.items():
+            shift_text = shift_names.get(shift_key, shift_key)
+            lines.append(f"- {shift_text}: {staff_name}")
+            scheduled_names.append(staff_name.strip())
+    else:
+        scheduled_names = []
+        lines.append("- Chưa có lịch ca hôm nay.")
+
+    lines.append("")
+    lines.append("🕒 Chấm công hôm nay:")
+    if today_attendance:
+        attendance_names = []
+        for staff_name, record in today_attendance.items():
+            checkin = record.get("checkin", "Chưa có")
+            checkout = record.get("checkout", "Chưa có")
+            lines.append(f"- {staff_name}: CHECKIN {checkin} / CHECKOUT {checkout}")
+            attendance_names.append(staff_name.strip())
+    else:
+        attendance_names = []
+        lines.append("- Chưa có dữ liệu chấm công hôm nay.")
+
+    warnings = []
+    for staff_name in attendance_names:
+        if staff_name not in scheduled_names:
+            warnings.append(f"- {staff_name} có chấm công nhưng chưa có trong lịch ca hôm nay.")
+
+    lines.append("")
+    lines.append("⚠️ Cảnh báo:")
+    if warnings:
+        lines.extend(warnings)
+    else:
+        lines.append("- Chưa phát hiện lệch lịch ca.")
+
+    await update.message.reply_text("\n".join(lines))
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -663,6 +742,7 @@ def main() -> None:
     app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
+    app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
     app.add_handler(CommandHandler("stafflist", stafflist_cmd))
