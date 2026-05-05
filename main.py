@@ -355,7 +355,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
-
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN - Tên")
             return
@@ -375,7 +381,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
-
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT - Tên")
             return
@@ -583,6 +595,60 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             lines.append("")
 
     await update.message.reply_text("\n".join(lines))
+async def staffadd_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    staff_name = " ".join(context.args).strip()
+
+    if not staff_name:
+        await update.message.reply_text("❌ Cách dùng: /staffadd Tên nhân viên")
+        return
+
+    DATA.setdefault("staff", {}).setdefault(chat_id, [])
+
+    if staff_name in DATA["staff"][chat_id]:
+        await update.message.reply_text(f"⚠️ {staff_name} đã có trong danh sách nhân viên.")
+        return
+
+    DATA["staff"][chat_id].append(staff_name)
+    save_data(DATA)
+
+    await update.message.reply_text(f"✅ Đã thêm nhân viên: {staff_name}")
+
+
+async def staffremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    staff_name = " ".join(context.args).strip()
+
+    if not staff_name:
+        await update.message.reply_text("❌ Cách dùng: /staffremove Tên nhân viên")
+        return
+
+    staff_list = DATA.get("staff", {}).get(chat_id, [])
+
+    if staff_name not in staff_list:
+        await update.message.reply_text(f"⚠️ Không tìm thấy nhân viên: {staff_name}")
+        return
+
+    staff_list.remove(staff_name)
+    save_data(DATA)
+
+    await update.message.reply_text(f"✅ Đã xóa nhân viên: {staff_name}")
+
+
+async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = str(update.effective_chat.id)
+    staff_list = DATA.get("staff", {}).get(chat_id, [])
+
+    if not staff_list:
+        await update.message.reply_text("📋 Chưa có nhân viên nào trong danh sách.")
+        return
+
+    lines = ["📋 DANH SÁCH NHÂN VIÊN TF", ""]
+
+    for index, staff_name in enumerate(staff_list, start=1):
+        lines.append(f"{index}. {staff_name}")
+
+    await update.message.reply_text("\n".join(lines))
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -597,6 +663,9 @@ def main() -> None:
     app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
+    app.add_handler(CommandHandler("staffadd", staffadd_cmd))
+    app.add_handler(CommandHandler("staffremove", staffremove_cmd))
+    app.add_handler(CommandHandler("stafflist", stafflist_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
