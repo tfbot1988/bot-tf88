@@ -346,6 +346,20 @@ async def check_followup(context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id=int(chat_id),
         text=f"🔁 Chưa thấy DONE {task_name}.\nNhân viên ca này xác nhận giúp sếp."
     )
+def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
+    day_keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    today_key = day_keys[datetime.now(TZ).weekday()]
+
+    today_shifts = DATA.get("shifts", {}).get(chat_id, {}).get(today_key, {})
+
+    if not today_shifts:
+        return False
+
+    for assigned_staff in today_shifts.values():
+        if assigned_staff.strip() == staff_name.strip():
+            return True
+
+    return False    
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
         return
@@ -374,9 +388,12 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
         save_data(DATA)
 
-        await update.message.reply_text(
-            f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
-        )
+       message = f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
+
+        if not staff_in_today_shift(chat_id, staff_name):
+            message += f"\n⚠️ Lưu ý: {staff_name} chưa có trong lịch ca hôm nay. Mr.Win cần kiểm tra."
+
+        await update.message.reply_text(message)
         return
 
     if text_upper.startswith("CHECKOUT"):
@@ -400,9 +417,12 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
 
-        await update.message.reply_text(
-            f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
-        )
+        message = f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
+
+        if not staff_in_today_shift(chat_id, staff_name):
+            message += f"\n⚠️ Lưu ý: {staff_name} chưa có trong lịch ca hôm nay. Mr.Win cần kiểm tra."
+
+        await update.message.reply_text(message)
         return
     if not text.upper().startswith("DONE "):
         return
