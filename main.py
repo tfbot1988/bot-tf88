@@ -388,12 +388,9 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
         save_data(DATA)
 
-                message = f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
-
-        if not staff_in_today_shift(chat_id, staff_name):
-            message += f"\n⚠️ Lưu ý: {staff_name} chưa có trong lịch ca hôm nay. Mr.Win cần kiểm tra."
-
-        await update.message.reply_text(message)
+        await update.message.reply_text(
+            f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
+        )
         return
 
     if text_upper.startswith("CHECKOUT"):
@@ -417,12 +414,9 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
 
-        message = f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
-
-        if not staff_in_today_shift(chat_id, staff_name):
-            message += f"\n⚠️ Lưu ý: {staff_name} chưa có trong lịch ca hôm nay. Mr.Win cần kiểm tra."
-
-        await update.message.reply_text(message)
+        await update.message.reply_text(
+            f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
+        )
         return
     if not text.upper().startswith("DONE "):
         return
