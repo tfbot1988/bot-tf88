@@ -890,6 +890,102 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.extend(issues)
 
     await update.message.reply_text("\n".join(lines))
+async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/salarytype Tên hourly\n"
+            "/salarytype Tên fixed\n\n"
+            "Ví dụ:\n"
+            "/salarytype Huy hourly\n"
+            "/salarytype Mr.Happy fixed"
+        )
+        return
+
+    staff_name = context.args[0].strip()
+    salary_type = context.args[1].strip().lower()
+
+    if salary_type not in ["hourly", "fixed"]:
+        await update.message.reply_text(
+            "❌ Loại lương không hợp lệ.\n"
+            "Chỉ dùng: hourly hoặc fixed"
+        )
+        return
+
+    DATA.setdefault("salary", {}).setdefault(chat_id, {})
+    DATA["salary"][chat_id].setdefault(staff_name, {})
+    DATA["salary"][chat_id][staff_name]["type"] = salary_type
+    save_data(DATA)
+
+    type_text = "Theo giờ" if salary_type == "hourly" else "Lương cứng"
+
+    await update.message.reply_text(
+        f"✅ Đã cập nhật loại lương cho {staff_name}:\n"
+        f"{type_text}"
+    )
+
+
+async def fixedsalary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/fixedsalary Tên số_tiền\n\n"
+            "Ví dụ:\n"
+            "/fixedsalary Mr.Happy 8000000"
+        )
+        return
+
+    staff_name = context.args[0].strip()
+    amount_text = context.args[1].replace(".", "").replace(",", "").replace("đ", "").strip()
+
+    try:
+        amount = int(amount_text)
+    except Exception:
+        await update.message.reply_text("❌ Số tiền không hợp lệ.")
+        return
+
+    DATA.setdefault("salary", {}).setdefault(chat_id, {})
+    DATA["salary"][chat_id].setdefault(staff_name, {})
+    DATA["salary"][chat_id][staff_name]["type"] = "fixed"
+    DATA["salary"][chat_id][staff_name]["fixed_salary"] = amount
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã cập nhật lương cứng cho {staff_name}:\n"
+        f"{amount:,}đ/tháng".replace(",", ".")
+    )
+
+
+async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    salary_data = DATA.get("salary", {}).get(chat_id, {})
+
+    if not salary_data:
+        await update.message.reply_text("Chưa có cấu hình lương.")
+        return
+
+    lines = ["💼 CẤU HÌNH LƯƠNG TF", ""]
+
+    for staff_name, info in salary_data.items():
+        salary_type = info.get("type", "hourly")
+
+        lines.append(f"👤 {staff_name}")
+
+        if salary_type == "fixed":
+            fixed_salary = info.get("fixed_salary", 0)
+            lines.append("- Loại lương: Lương cứng")
+            lines.append(f"- Mức: {fixed_salary:,}đ/tháng".replace(",", "."))
+        else:
+            lines.append("- Loại lương: Theo giờ")
+            lines.append("- Mức: 30.000đ/giờ")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -909,6 +1005,9 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
+    app.add_handler(CommandHandler("salarytype", salarytype_cmd))
+    app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
+    app.add_handler(CommandHandler("salarylist", salarylist_cmd))
     app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
