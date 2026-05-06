@@ -819,6 +819,18 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.extend(issues)
 
     await update.message.reply_text("\n".join(lines))
+async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    DATA.setdefault("attendance", {})
+    DATA["attendance"][chat_id] = {}
+    save_data(DATA)
+
+    await update.message.reply_text(
+        "✅ Đã xóa sạch dữ liệu chấm công của nhóm này.\n\n"
+        "Các lệnh CHECKIN / CHECKOUT vẫn dùng bình thường.\n"
+        "Nhân viên có thể bắt đầu chấm công lại từ đầu."
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -836,6 +848,7 @@ def main() -> None:
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
+    app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
