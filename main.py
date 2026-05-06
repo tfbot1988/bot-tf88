@@ -728,11 +728,21 @@ async def checkshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("- Chưa phát hiện lệch lịch ca.")
 
     await update.message.reply_text("\n".join(lines))
+async def getchatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    title = update.effective_chat.title or "Chat cá nhân"
+
+    await update.message.reply_text(
+        f"🆔 CHAT ID\n"
+        f"Nhóm/Chat: {title}\n"
+        f"ID: {chat_id}"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("getchatid", getchatid_cmd))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addat", addat))
     app.add_handler(CommandHandler("list", list_cmd))
