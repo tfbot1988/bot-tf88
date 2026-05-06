@@ -838,7 +838,7 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now_dt = datetime.now(TZ)
     current_month = now_dt.strftime("%Y-%m")
     attendance_all = DATA.get("attendance", {}).get(chat_id, {})
-
+    salary_data = DATA.get("salary", {}).get(chat_id, {})
     totals = {}
     issues = []
 
@@ -847,6 +847,9 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             continue
 
         for staff_name, record in day_data.items():
+            salary_type = salary_data.get(staff_name, {}).get("type", "hourly")
+            if salary_type == "fixed":
+                continue
             checkin = record.get("checkin")
             checkout = record.get("checkout")
 
@@ -870,8 +873,12 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 issues.append(f"- {staff_name} ngày {day_key}: dữ liệu giờ không hợp lệ")
 
     lines = [f"💰 BẢNG LƯƠNG TẠM THÁNG {now_dt.strftime('%m/%Y')}", ""]
-
-    if totals:
+    fixed_staff = []
+    for staff_name, info in salary_data.items():
+        if info.get("type") == "fixed":
+            fixed_salary = info.get("fixed_salary", 0)
+            fixed_staff.append((staff_name, fixed_salary))
+    if totals or fixed_staff:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
             mins = minutes % 60
@@ -880,6 +887,12 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append(f"👤 {staff_name}")
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
+            lines.append("")
+        for staff_name, fixed_salary in fixed_staff:
+            lines.append(f"👤 {staff_name}")
+            lines.append("- Loại lương: Lương cứng")
+            lines.append(f"- Lương tháng: {fixed_salary:,}đ".replace(",", "."))
+            lines.append("- Ghi chú: CHECKIN / CHECKOUT dùng để theo dõi ngày công")
             lines.append("")
     else:
         lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương tháng.")
