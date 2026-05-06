@@ -999,6 +999,159 @@ async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("")
 
     await update.message.reply_text("\n".join(lines))
+async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
+    data = context.job.data
+    today = datetime.now(TZ)
+
+    if today.day != data["day"]:
+        return
+
+    await context.bot.send_message(
+        chat_id=data["chat_id"],
+        text=(
+            "🔔 NHẮC VIỆC HẰNG THÁNG\n\n"
+            f"{data['text']}"
+        )
+    )
+
+
+def schedule_monthly_item(app, chat_id: str, index: int, item: dict):
+    hour, minute = map(int, item["time"].split(":"))
+    remind_time = datetime.now(TZ).replace(
+        hour=hour,
+        minute=minute,
+        second=0,
+        microsecond=0
+    ).timetz()
+
+    app.job_queue.run_daily(
+        monthly_reminder_job,
+        time=remind_time,
+        data={
+            "chat_id": chat_id,
+            "day": item["day"],
+            "time": item["time"],
+            "text": item["text"],
+        },
+        name=f"monthly_{chat_id}_{index}"
+    )
+
+
+def schedule_monthly_all(app):
+    monthly_data = DATA.get("monthly", {})
+
+    for chat_id, items in monthly_data.items():
+        for index, item in enumerate(items):
+            schedule_monthly_item(app, chat_id, index, item)
+
+
+async def addmonthly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 3:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/addmonthly ngày giờ nội_dung\n\n"
+            "Ví dụ:\n"
+            "/addmonthly 5 08:00 Đóng tiền Bảo Hiểm Xã Hội"
+        )
+        return
+
+    try:
+        day = int(context.args[0])
+        time_text = context.args[1].strip()
+        datetime.strptime(time_text, "%H:%M")
+    except Exception:
+        await update.message.reply_text(
+            "❌ Sai định dạng.\n"
+            "Ví dụ đúng:\n"
+            "/addmonthly 5 08:00 Đóng tiền Bảo Hiểm Xã Hội"
+        )
+        return
+
+    if day < 1 or day > 31:
+        await update.message.reply_text("❌ Ngày phải từ 1 đến 31.")
+        return
+
+    text = " ".join(context.args[2:]).strip()
+
+    if not text:
+        await update.message.reply_text("❌ Nội dung nhắc không được để trống.")
+        return
+
+    DATA.setdefault("monthly", {}).setdefault(chat_id, [])
+
+    item = {
+        "day": day,
+        "time": time_text,
+        "text": text,
+    }
+
+    DATA["monthly"][chat_id].append(item)
+    save_data(DATA)
+
+    index = len(DATA["monthly"][chat_id]) - 1
+    schedule_monthly_item(context.application, chat_id, index, item)
+
+    await update.message.reply_text(
+        "✅ Đã thêm lịch nhắc hằng tháng:\n"
+        f"- Ngày: {day} Tây hằng tháng\n"
+        f"- Giờ: {time_text}\n"
+        f"- Nội dung: {text}"
+    )
+
+
+async def monthlylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    items = DATA.get("monthly", {}).get(chat_id, [])
+
+    if not items:
+        await update.message.reply_text("Chưa có lịch nhắc hằng tháng.")
+        return
+
+    lines = ["📅 LỊCH NHẮC HẰNG THÁNG", ""]
+
+    for index, item in enumerate(items, start=1):
+        lines.append(
+            f"{index}. Ngày {item['day']} - {item['time']}\n"
+            f"   {item['text']}"
+        )
+
+    await update.message.reply_text("\n".join(lines))
+
+
+async def removemonthly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if not context.args:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/removemonthly số_thứ_tự\n\n"
+            "Ví dụ:\n"
+            "/removemonthly 1"
+        )
+        return
+
+    try:
+        index = int(context.args[0]) - 1
+    except Exception:
+        await update.message.reply_text("❌ Số thứ tự không hợp lệ.")
+        return
+
+    items = DATA.get("monthly", {}).get(chat_id, [])
+
+    if index < 0 or index >= len(items):
+        await update.message.reply_text("❌ Không tìm thấy lịch nhắc này.")
+        return
+
+    removed = items.pop(index)
+    save_data(DATA)
+
+    await update.message.reply_text(
+        "✅ Đã xóa lịch nhắc hằng tháng:\n"
+        f"- Ngày {removed['day']} - {removed['time']}\n"
+        f"- {removed['text']}"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -1021,6 +1174,9 @@ def main() -> None:
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
+    app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
+    app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
+    app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
     app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
