@@ -684,12 +684,14 @@ async def checkshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     today_key = day_keys[datetime.now(TZ).weekday()]
     today_text = day_names.get(today_key, today_key)
 
-    today_shifts = DATA.get("shifts", {}).get(chat_id, {}).get(today_key, {})
+    shift_group_id = DATA.get("settings", {}).get(chat_id, {}).get("shift_group_id", chat_id)
+    today_shifts = DATA.get("shifts", {}).get(shift_group_id, {}).get(today_key, {})
+    linked_note = "" if shift_group_id == chat_id else f"\n🔗 Lịch ca lấy từ nhóm: {shift_group_id}"
     today_attendance = DATA.get("attendance", {}).get(chat_id, {}).get(
         datetime.now(TZ).strftime("%Y-%m-%d"), {}
     )
 
-    lines = [f"📋 KIỂM TRA LỊCH CA HÔM NAY ({today_text})", ""]
+    lines = [f"📋 KIỂM TRA LỊCH CA HÔM NAY ({today_text}){linked_note}", ""]
 
     lines.append("🗓 Lịch ca hôm nay:")
     if today_shifts:
@@ -737,12 +739,34 @@ async def getchatid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Nhóm/Chat: {title}\n"
         f"ID: {chat_id}"
     )
+async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if not context.args:
+        await update.message.reply_text(
+            "Cách dùng: /linkshiftgroup <chat_id_nhóm_xếp_ca>\n"
+            "Ví dụ: /linkshiftgroup -5215186149"
+        )
+        return
+
+    shift_group_id = context.args[0].strip()
+
+    DATA.setdefault("settings", {}).setdefault(chat_id, {})
+    DATA["settings"][chat_id]["shift_group_id"] = shift_group_id
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã liên kết nhóm xếp ca:\n"
+        f"{shift_group_id}\n\n"
+        f"Từ nay /checkshift ở nhóm này sẽ lấy lịch ca từ nhóm xếp ca đã liên kết."
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("getchatid", getchatid_cmd))
+    app.add_handler(CommandHandler("linkshiftgroup", linkshiftgroup_cmd))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("addat", addat))
     app.add_handler(CommandHandler("list", list_cmd))
