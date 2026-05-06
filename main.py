@@ -831,6 +831,65 @@ async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         "Các lệnh CHECKIN / CHECKOUT vẫn dùng bình thường.\n"
         "Nhân viên có thể bắt đầu chấm công lại từ đầu."
     )
+async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    rate = 30000
+
+    now_dt = datetime.now(TZ)
+    current_month = now_dt.strftime("%Y-%m")
+    attendance_all = DATA.get("attendance", {}).get(chat_id, {})
+
+    totals = {}
+    issues = []
+
+    for day_key, day_data in attendance_all.items():
+        if not day_key.startswith(current_month):
+            continue
+
+        for staff_name, record in day_data.items():
+            checkin = record.get("checkin")
+            checkout = record.get("checkout")
+
+            if not checkin or not checkout:
+                issues.append(f"- {staff_name} ngày {day_key}: thiếu CHECKIN hoặc CHECKOUT")
+                continue
+
+            try:
+                checkin_dt = datetime.strptime(checkin, "%H:%M")
+                checkout_dt = datetime.strptime(checkout, "%H:%M")
+                minutes = int((checkout_dt - checkin_dt).total_seconds() / 60)
+
+                if minutes <= 0:
+                    issues.append(f"- {staff_name} ngày {day_key}: giờ CHECKOUT không hợp lệ")
+                    continue
+
+                totals.setdefault(staff_name, 0)
+                totals[staff_name] += minutes
+
+            except Exception:
+                issues.append(f"- {staff_name} ngày {day_key}: dữ liệu giờ không hợp lệ")
+
+    lines = [f"💰 BẢNG LƯƠNG TẠM THÁNG {now_dt.strftime('%m/%Y')}", ""]
+
+    if totals:
+        for staff_name, minutes in totals.items():
+            hours = minutes // 60
+            mins = minutes % 60
+            salary = round((minutes / 60) * rate)
+
+            lines.append(f"👤 {staff_name}")
+            lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
+            lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
+            lines.append("")
+    else:
+        lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương tháng.")
+        lines.append("")
+
+    if issues:
+        lines.append("⚠️ Dữ liệu cần Mr.Win kiểm tra:")
+        lines.extend(issues)
+
+    await update.message.reply_text("\n".join(lines))
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -848,6 +907,7 @@ def main() -> None:
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
+    app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
