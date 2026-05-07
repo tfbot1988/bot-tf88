@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from pathlib import Path
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from lunardate import LunarDate
 from typing import Dict, List, Any
@@ -1155,21 +1155,48 @@ async def removemonthly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 async def lunar_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
-    today = datetime.now(TZ)
+    today_dt = datetime.now(TZ)
+    today_date = today_dt.date()
 
-    lunar_today = LunarDate.fromSolarDate(today.year, today.month, today.day)
+    lunar_today = LunarDate.fromSolarDate(
+        today_dt.year,
+        today_dt.month,
+        today_dt.day
+    )
 
-    if lunar_today.day != data["day"] or lunar_today.month != data["month"]:
+    try:
+        target_solar = LunarDate(
+            lunar_today.year,
+            data["month"],
+            data["day"]
+        ).toSolarDate()
+    except Exception:
         return
 
-    await context.bot.send_message(
-        chat_id=data["chat_id"],
-        text=(
-            "🕯 NHẮC GIỖ ÂM LỊCH\n\n"
-            f"Hôm nay là ngày {data['day']:02d}/{data['month']:02d} âm lịch.\n"
-            f"{data['text']}"
+    remind_before_date = target_solar - timedelta(days=7)
+
+    if today_date == remind_before_date:
+        await context.bot.send_message(
+            chat_id=data["chat_id"],
+            text=(
+                "🔔 NHẮC TRƯỚC GIỖ ÂM LỊCH\n\n"
+                f"Còn 7 ngày nữa là ngày {data['day']:02d}/{data['month']:02d} âm lịch.\n"
+                f"{data['text']}\n\n"
+                "Sếp nhớ chuẩn bị đồ cúng, sắp xếp thời gian và nhắc người nhà."
+            )
         )
-    )
+        return
+
+    if today_date == target_solar:
+        await context.bot.send_message(
+            chat_id=data["chat_id"],
+            text=(
+                "🕯 HÔM NAY LÀ GIỖ ÂM LỊCH\n\n"
+                f"Hôm nay là ngày {data['day']:02d}/{data['month']:02d} âm lịch.\n"
+                f"{data['text']}"
+            )
+        )
+        return
 
 
 def schedule_lunar_item(app, chat_id: str, index: int, item: dict):
