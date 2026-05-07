@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
+from lunardate import LunarDate
 from typing import Dict, List, Any
 
 from telegram import Update
@@ -1152,6 +1153,169 @@ async def removemonthly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"- Ngày {removed['day']} - {removed['time']}\n"
         f"- {removed['text']}"
     )
+async def lunar_reminder_job(context: ContextTypes.DEFAULT_TYPE):
+    data = context.job.data
+    today = datetime.now(TZ)
+
+    lunar_today = LunarDate.fromSolarDate(today.year, today.month, today.day)
+
+    if lunar_today.day != data["day"] or lunar_today.month != data["month"]:
+        return
+
+    await context.bot.send_message(
+        chat_id=data["chat_id"],
+        text=(
+            "🕯 NHẮC GIỖ ÂM LỊCH\n\n"
+            f"Hôm nay là ngày {data['day']:02d}/{data['month']:02d} âm lịch.\n"
+            f"{data['text']}"
+        )
+    )
+
+
+def schedule_lunar_item(app, chat_id: str, index: int, item: dict):
+    hour, minute = map(int, item["time"].split(":"))
+    remind_time = datetime.now(TZ).replace(
+        hour=hour,
+        minute=minute,
+        second=0,
+        microsecond=0
+    ).timetz()
+
+    app.job_queue.run_daily(
+        lunar_reminder_job,
+        time=remind_time,
+        data={
+            "chat_id": chat_id,
+            "day": item["day"],
+            "month": item["month"],
+            "time": item["time"],
+            "text": item["text"],
+        },
+        name=f"lunar_{chat_id}_{index}"
+    )
+
+
+def schedule_lunar_all(app):
+    lunar_data = DATA.get("lunar", {})
+
+    for chat_id, items in lunar_data.items():
+        for index, item in enumerate(items):
+            schedule_lunar_item(app, chat_id, index, item)
+
+
+async def addlunar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 4:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/addlunar ngày_âm tháng_âm giờ nội_dung\n\n"
+            "Ví dụ:\n"
+            "/addlunar 01 08 08:00 Giỗ Ông cố"
+        )
+        return
+
+    try:
+        day = int(context.args[0])
+        month = int(context.args[1])
+        time_text = context.args[2].strip()
+        datetime.strptime(time_text, "%H:%M")
+    except Exception:
+        await update.message.reply_text(
+            "❌ Sai định dạng.\n"
+            "Ví dụ đúng:\n"
+            "/addlunar 01 08 08:00 Giỗ Ông cố"
+        )
+        return
+
+    if day < 1 or day > 30:
+        await update.message.reply_text("❌ Ngày âm phải từ 1 đến 30.")
+        return
+
+    if month < 1 or month > 12:
+        await update.message.reply_text("❌ Tháng âm phải từ 1 đến 12.")
+        return
+
+    text = " ".join(context.args[3:]).strip()
+
+    if not text:
+        await update.message.reply_text("❌ Nội dung nhắc không được để trống.")
+        return
+
+    DATA.setdefault("lunar", {}).setdefault(chat_id, [])
+
+    item = {
+        "day": day,
+        "month": month,
+        "time": time_text,
+        "text": text,
+    }
+
+    DATA["lunar"][chat_id].append(item)
+    save_data(DATA)
+
+    index = len(DATA["lunar"][chat_id]) - 1
+    schedule_lunar_item(context.application, chat_id, index, item)
+
+    await update.message.reply_text(
+        "✅ Đã thêm lịch nhắc giỗ âm lịch hằng năm:\n"
+        f"- Ngày âm: {day:02d}/{month:02d}\n"
+        f"- Giờ: {time_text}\n"
+        f"- Nội dung: {text}"
+    )
+
+
+async def lunarlist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    items = DATA.get("lunar", {}).get(chat_id, [])
+
+    if not items:
+        await update.message.reply_text("Chưa có lịch nhắc giỗ âm lịch.")
+        return
+
+    lines = ["🕯 LỊCH GIỖ ÂM LỊCH HẰNG NĂM", ""]
+
+    for index, item in enumerate(items, start=1):
+        lines.append(
+            f"{index}. Ngày âm {item['day']:02d}/{item['month']:02d} - {item['time']}\n"
+            f"   {item['text']}"
+        )
+
+    await update.message.reply_text("\n".join(lines))
+
+
+async def removelunar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if not context.args:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/removelunar số_thứ_tự\n\n"
+            "Ví dụ:\n"
+            "/removelunar 1"
+        )
+        return
+
+    try:
+        index = int(context.args[0]) - 1
+    except Exception:
+        await update.message.reply_text("❌ Số thứ tự không hợp lệ.")
+        return
+
+    items = DATA.get("lunar", {}).get(chat_id, [])
+
+    if index < 0 or index >= len(items):
+        await update.message.reply_text("❌ Không tìm thấy lịch giỗ này.")
+        return
+
+    removed = items.pop(index)
+    save_data(DATA)
+
+    await update.message.reply_text(
+        "✅ Đã xóa lịch giỗ âm lịch:\n"
+        f"- Ngày âm {removed['day']:02d}/{removed['month']:02d} - {removed['time']}\n"
+        f"- {removed['text']}"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -1177,6 +1341,9 @@ def main() -> None:
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
     app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
+    app.add_handler(CommandHandler("addlunar", addlunar_cmd))
+    app.add_handler(CommandHandler("lunarlist", lunarlist_cmd))
+    app.add_handler(CommandHandler("removelunar", removelunar_cmd))
     app.add_handler(CommandHandler("checkshift", checkshift_cmd))
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
@@ -1186,7 +1353,7 @@ def main() -> None:
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
-    
+    schedule_lunar_all(app)
     log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
