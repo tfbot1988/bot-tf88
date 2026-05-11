@@ -422,6 +422,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         unit_price = get_field("Đơn giá")
         total = get_field("Tổng tiền")
         supplier = get_field("Nhà cung cấp")
+        expiry_date = get_field("Hạn sử dụng")
         approver = get_field("Người duyệt")
         note = get_field("Ghi chú")
 
@@ -442,6 +443,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"Đơn giá: {unit_price or 'Chưa ghi'}\n"
             f"Tổng tiền: {total or 'Chưa ghi'}\n"
             f"Nhà cung cấp: {supplier or 'Chưa ghi'}\n"
+            f"Hạn sử dụng: {expiry_date or 'Chưa ghi'}\n"
             f"Người duyệt: {approver or 'Miss Uyên'}\n"
             f"Ghi chú: {note or 'Không có'}\n\n"
             "Miss Uyên vui lòng kiểm tra, duyệt và chịu trách nhiệm cuối cùng.\n"
@@ -463,6 +465,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         enough_items = get_field("Các món còn đủ")
         low_items = get_field("Các món sắp hết")
         need_import = get_field("Các món cần nhập")
+        near_expiry = get_field("Hàng gần hết hạn")
         damaged = get_field("Hàng hư hao / thất thoát nếu có")
         note = get_field("Ghi chú")
 
@@ -476,27 +479,36 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        alert_text = ""
-        if low_items:
-            alert_text = (
-                "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
-                f"{low_items}"
-            )
+    alert_text = ""
+    if low_items:
+        alert_text = (
+            "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
+            f"{low_items}"
+        )
 
-        await update.message.reply_text(
+    expiry_alert_text = ""
+    if near_expiry:
+        expiry_alert_text = (
+            "\n\n📅 CẢNH BÁO HÀNG GẦN HẾT HẠN\n"
+            f"{near_expiry}"
+        )
+
+    await update.message.reply_text(
             "✅ ĐÃ GHI NHẬN KIỂM KHO\n\n"
             f"Ngày kiểm: {check_date or 'Chưa ghi'}\n"
             f"Người kiểm: {checker or 'Chưa ghi'}\n"
             f"Các món còn đủ: {enough_items or 'Chưa ghi'}\n"
             f"Các món sắp hết: {low_items or 'Không có'}\n"
             f"Các món cần nhập: {need_import or 'Không có'}\n"
+            f"Hàng gần hết hạn: {near_expiry or 'Không có'}\n"
             f"Hư hao / thất thoát: {damaged or 'Không có'}\n"
-            f"Ghi chú: {note or 'Không có'}"
-            f"{alert_text}\n\n"
+            f"Ghi chú: {note or 'Không có'}\n"
+            f"{alert_text}"
+            f"{expiry_alert_text}\n\n"
             "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý nếu cần nhập hàng.\n"
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
         )
-        return
+    return
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), {})
@@ -1689,6 +1701,7 @@ async def nhaphang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Đơn giá:\n"
         "Tổng tiền:\n"
         "Nhà cung cấp:\n"
+        "Hạn sử dụng:\n"
         "Người duyệt:\n"
         "Ghi chú:"
     )
@@ -1715,6 +1728,7 @@ async def kiemkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Các món còn đủ:\n"
         "Các món sắp hết:\n"
         "Các món cần nhập:\n"
+        "Hàng gần hết hạn:\n"
         "Hàng hư hao / thất thoát nếu có:\n"
         "Ghi chú:"
     )
