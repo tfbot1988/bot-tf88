@@ -1732,6 +1732,21 @@ async def kiemkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Hàng hư hao / thất thoát nếu có:\n"
         "Ghi chú:"
     )
+    async def baocaokho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "📊 MẪU BÁO CÁO KHO CUỐI NGÀY TF\n\n"
+        "BÁO CÁO KHO - Ngày\n\n"
+        "Người báo cáo:\n"
+        "Tình trạng kho hôm nay:\n"
+        "Hàng đã nhập:\n"
+        "Hàng còn thiếu:\n"
+        "Hàng sắp hết:\n"
+        "Hàng gần hết hạn:\n"
+        "Hàng hư hao / thất thoát:\n"
+        "Đề xuất xử lý:\n"
+        "Người duyệt: Miss Uyên\n"
+        "Ghi chú:"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -1749,6 +1764,7 @@ def main() -> None:
     app.add_handler(CommandHandler("nhaphang", nhaphang_cmd))
     app.add_handler(CommandHandler("thieuhang", thieuhang_cmd))
     app.add_handler(CommandHandler("kiemkho", kiemkho_cmd))
+    app.add_handler(CommandHandler("baocaokho", baocaokho_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
     app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
