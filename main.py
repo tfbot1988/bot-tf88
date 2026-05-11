@@ -407,6 +407,47 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Mr.Happy / Mr.Win vui lòng kiểm tra và xử lý."
         )
         return    
+    if text_upper.startswith("NHẬP HÀNG -"):
+        def get_field(field_name: str) -> str:
+            for line in text.splitlines():
+                if line.lower().startswith(field_name.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        first_line = text.splitlines()[0]
+        receiver = first_line.replace("NHẬP HÀNG -", "").strip()
+
+        item = get_field("Mặt hàng")
+        quantity = get_field("Số lượng")
+        unit_price = get_field("Đơn giá")
+        total = get_field("Tổng tiền")
+        supplier = get_field("Nhà cung cấp")
+        approver = get_field("Người duyệt")
+        note = get_field("Ghi chú")
+
+        if not item or not quantity:
+            await update.message.reply_text(
+                "⚠️ NHẬP HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "Mặt hàng:\n"
+                "Số lượng:"
+            )
+            return
+
+        await update.message.reply_text(
+            "✅ ĐÃ GHI NHẬN NHẬP HÀNG\n\n"
+            f"Người nhập: {receiver or 'Chưa ghi'}\n"
+            f"Mặt hàng: {item}\n"
+            f"Số lượng: {quantity}\n"
+            f"Đơn giá: {unit_price or 'Chưa ghi'}\n"
+            f"Tổng tiền: {total or 'Chưa ghi'}\n"
+            f"Nhà cung cấp: {supplier or 'Chưa ghi'}\n"
+            f"Người duyệt: {approver or 'Miss Uyên'}\n"
+            f"Ghi chú: {note or 'Không có'}\n\n"
+            "Miss Uyên vui lòng kiểm tra, duyệt và chịu trách nhiệm cuối cùng.\n"
+            "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho và chi phí."
+        )
+        return  
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
