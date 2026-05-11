@@ -497,9 +497,9 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
         )
         return
-        if text_upper.startswith("CHECKIN"):
+    if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
-        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), {})
         if staff_list and staff_name not in staff_list:
             await update.message.reply_text(
                 f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
