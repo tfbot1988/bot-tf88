@@ -1516,6 +1516,49 @@ async def removebirthday_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"- Ngày {removed['day']:02d}/{removed['month']:02d} - {removed['time']}\n"
         f"- {removed['text']}"
     )
+async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📦 TF KHO & NHẬP HÀNG\n\n"
+        "Hiện tại chức năng tồn kho đang ở bản ghi nhận thủ công.\n\n"
+        "Các lệnh đang dùng:\n"
+        "/nhaphang - Gửi mẫu nhập hàng\n"
+        "/thieuhang - Gửi mẫu báo thiếu hàng\n"
+        "/kiemkho - Gửi mẫu kiểm kho\n"
+    )
+
+
+async def nhaphang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📥 MẪU NHẬP HÀNG TF\n\n"
+        "NHẬP HÀNG - Tên người nhập\n"
+        "Mặt hàng:\n"
+        "Số lượng:\n"
+        "Giá:\n"
+        "Nhà cung cấp:\n"
+        "Ghi chú:"
+    )
+
+
+async def thieuhang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "⚠️ MẪU BÁO THIẾU HÀNG TF\n\n"
+        "THIẾU HÀNG - Tên người báo\n"
+        "Mặt hàng:\n"
+        "Số lượng còn:\n"
+        "Mức độ: Gấp / Bình thường\n"
+        "Ghi chú:"
+    )
+
+
+async def kiemkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📋 MẪU KIỂM KHO TF\n\n"
+        "KIỂM KHO - Ngày\n"
+        "Người kiểm:\n"
+        "Các món thiếu:\n"
+        "Các món cần nhập:\n"
+        "Ghi chú:"
+    )
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
@@ -1528,6 +1571,10 @@ def main() -> None:
     app.add_handler(CommandHandler("list", list_cmd))
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
+    app.add_handler(CommandHandler("tonkho", tonkho_cmd))
+    app.add_handler(CommandHandler("nhaphang", nhaphang_cmd))
+    app.add_handler(CommandHandler("thieuhang", thieuhang_cmd))
+    app.add_handler(CommandHandler("kiemkho", kiemkho_cmd))
     app.add_handler(CommandHandler("now", now_cmd))
     app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
