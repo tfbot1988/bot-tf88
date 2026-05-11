@@ -1656,7 +1656,30 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Lưu ý: Nhân viên điền đúng mẫu để Mr.Happy và Mr.Win dễ kiểm tra."
     )
 
-
+async def khohelp_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "📦 HƯỚNG DẪN NHÓM TF KHO & NHẬP HÀNG\n\n"
+        "Nhóm này dùng để báo thiếu hàng, nhập hàng, kiểm kho và theo dõi hàng sắp hết.\n\n"
+        "👤 PHÂN QUYỀN\n"
+        "- Miss Uyên: người duyệt và chịu trách nhiệm cuối cùng.\n"
+        "- Mr.Happy: theo dõi hàng thực tế, hỗ trợ báo thiếu hàng, nhập hàng, kiểm kho.\n"
+        "- Mr.Win: hỗ trợ đối chiếu kho, chi phí và báo cáo.\n"
+        "- Nhân viên: thấy thiếu hàng / hư hao phải báo ngay, không tự ý nhập nếu chưa duyệt.\n\n"
+        "📌 CÁC LỆNH ĐANG DÙNG\n"
+        "/tonkho - Xem tổng quan kho\n"
+        "/nhaphang - Gửi mẫu nhập hàng\n"
+        "/thieuhang - Gửi mẫu báo thiếu hàng\n"
+        "/kiemkho - Gửi mẫu kiểm kho\n"
+        "/khohelp - Xem hướng dẫn sử dụng nhóm kho\n\n"
+        "⚠️ NGUYÊN TẮC BẮT BUỘC\n"
+        "1. Gửi đúng mẫu, đúng tiêu đề.\n"
+        "2. Báo thiếu hàng phải có mặt hàng, số lượng còn, mức độ.\n"
+        "3. Nhập hàng phải có số lượng, đơn giá, tổng tiền, nhà cung cấp, người duyệt.\n"
+        "4. Kiểm kho phải ghi rõ món còn đủ, món sắp hết, món cần nhập, hư hao nếu có.\n"
+        "5. Phát sinh quan trọng phải báo ngay trong ngày.\n"
+        "6. Tin nhắn sai mẫu có thể bot không ghi nhận.\n\n"
+        "✅ Gửi đúng mẫu để TF quản lý kho rõ ràng, nhập hàng chuẩn xác và vận hành minh bạch."
+    )
 async def nhaphang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📥 MẪU NHẬP HÀNG TF\n\n"
@@ -1708,6 +1731,7 @@ def main() -> None:
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("clear", clear_cmd))
     app.add_handler(CommandHandler("tonkho", tonkho_cmd))
+    app.add_handler(CommandHandler("khohelp", khohelp_cmd))
     app.add_handler(CommandHandler("nhaphang", nhaphang_cmd))
     app.add_handler(CommandHandler("thieuhang", thieuhang_cmd))
     app.add_handler(CommandHandler("kiemkho", kiemkho_cmd))
