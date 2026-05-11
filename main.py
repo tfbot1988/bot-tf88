@@ -368,7 +368,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     text = update.message.text.strip()
     text_upper = text.upper()
 
-        if text_upper.startswith("THIẾU HÀNG -"):
+    if text_upper.startswith("THIẾU HÀNG -"):
         def get_field(field_name: str) -> str:
             for line in text.splitlines():
                 if line.lower().startswith(field_name.lower() + ":"):
@@ -406,7 +406,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"Ghi chú: {note or 'Không có'}\n\n"
             "Mr.Happy / Mr.Win vui lòng kiểm tra và xử lý."
         )
-        return
+        return    
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
