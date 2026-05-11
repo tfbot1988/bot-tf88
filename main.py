@@ -1732,7 +1732,7 @@ async def kiemkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Hàng hư hao / thất thoát nếu có:\n"
         "Ghi chú:"
     )
-    async def baocaokho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def baocaokho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "📊 MẪU BÁO CÁO KHO CUỐI NGÀY TF\n\n"
         "BÁO CÁO KHO - Ngày\n\n"
