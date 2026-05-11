@@ -479,19 +479,21 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        alert_text = ""
-        if low_items:
-            alert_text = (
-                "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
-                f"{low_items}"
-            )
-      expiry_alert_text = ""
+    alert_text = ""
+    if low_items:
+        alert_text = (
+            "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
+            f"{low_items}"
+        )
+
+    expiry_alert_text = ""
     if near_expiry:
         expiry_alert_text = (
             "\n\n📅 CẢNH BÁO HÀNG GẦN HẾT HẠN\n"
             f"{near_expiry}"
         )
-        await update.message.reply_text(
+
+    await update.message.reply_text(
             "✅ ĐÃ GHI NHẬN KIỂM KHO\n\n"
             f"Ngày kiểm: {check_date or 'Chưa ghi'}\n"
             f"Người kiểm: {checker or 'Chưa ghi'}\n"
