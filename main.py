@@ -530,7 +530,65 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Miss Uyên vui lòng kiểm tra và xác nhận nhập kho.\n"
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu chi phí nếu cần."
         )
-        return        
+        return      
+              if text_upper.startswith("KIỂM KHO -"):
+        def get_field(field_name: str) -> str:
+            for line in text.splitlines():
+                if line.lower().startswith(field_name.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        first_line = text.splitlines()[0]
+        check_date = first_line.replace("KIỂM KHO -", "").strip()
+
+        checker = get_field("Người kiểm")
+        enough_items = get_field("Các món còn đủ")
+        low_items = get_field("Các món sắp hết")
+        need_import = get_field("Các món cần nhập")
+        near_expiry = get_field("Hàng gần hết hạn")
+        damaged = get_field("Hàng hư hao / thất thoát nếu có")
+        note = get_field("Ghi chú")
+
+        if not checker:
+            await update.message.reply_text(
+                "⚠️ KIỂM KHO CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "Người kiểm:\n"
+                "Các món sắp hết:\n"
+                "Các món cần nhập:"
+            )
+            return
+
+        alert_text = ""
+        if low_items:
+            alert_text = (
+                "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
+                f"{low_items}"
+            )
+
+        expiry_alert_text = ""
+        if near_expiry:
+            expiry_alert_text = (
+                "\n\n🗓️ CẢNH BÁO HÀNG GẦN HẾT HẠN\n"
+                f"{near_expiry}"
+            )
+
+        await update.message.reply_text(
+            "✅ ĐÃ GHI NHẬN KIỂM KHO\n\n"
+            f"Ngày kiểm: {check_date or 'Chưa ghi'}\n"
+            f"Người kiểm: {checker or 'Chưa ghi'}\n"
+            f"Các món còn đủ: {enough_items or 'Chưa ghi'}\n"
+            f"Các món sắp hết: {low_items or 'Không có'}\n"
+            f"Các món cần nhập: {need_import or 'Không có'}\n"
+            f"Hàng gần hết hạn: {near_expiry or 'Không có'}\n"
+            f"Hư hao / thất thoát: {damaged or 'Không có'}\n"
+            f"Ghi chú: {note or 'Không có'}"
+            f"{alert_text}"
+            f"{expiry_alert_text}\n\n"
+            "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý nếu cần nhập hàng.\n"
+            "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
+        )
+        return
 async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     args = context.args
