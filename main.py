@@ -562,7 +562,6 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý nếu cần nhập hàng.\n"
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
         )
-        return
 
     if not text.upper().startswith("DONE "):
         return
