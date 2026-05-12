@@ -448,6 +448,46 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
         )
         return
+    if text_upper.startswith("THIẾU HÀNG -"):
+        def get_field(field_name: str) -> str:
+            for line in text.splitlines():
+                if line.lower().startswith(field_name.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        first_line = text.splitlines()[0]
+        reporter = first_line.replace("THIẾU HÀNG -", "").strip()
+
+        item = get_field("Mặt hàng")
+        remaining = get_field("Số lượng còn")
+        level = get_field("Mức độ")
+        enough_until = get_field("Dự kiến đủ dùng đến")
+        suggested = get_field("Đề xuất nhập thêm")
+        note = get_field("Ghi chú")
+
+        if not item or not remaining or not level:
+            await update.message.reply_text(
+                "⚠️ BÁO THIẾU HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "Mặt hàng:\n"
+                "Số lượng còn:\n"
+                "Mức độ:"
+            )
+            return
+
+        await update.message.reply_text(
+            "✅ ĐÃ GHI NHẬN BÁO THIẾU HÀNG\n\n"
+            f"Người báo: {reporter or 'Chưa ghi'}\n"
+            f"Mặt hàng: {item}\n"
+            f"Số lượng còn: {remaining}\n"
+            f"Mức độ: {level}\n"
+            f"Dự kiến đủ dùng đến: {enough_until or 'Chưa ghi'}\n"
+            f"Đề xuất nhập thêm: {suggested or 'Chưa ghi'}\n"
+            f"Ghi chú: {note or 'Không có'}\n\n"
+            "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý.\n"
+            "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho và chi phí."
+        )
+        return
 async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     args = context.args
