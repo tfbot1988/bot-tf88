@@ -367,8 +367,61 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     text = update.message.text.strip()
     text_upper = text.upper()
-    if text_upper.startswith("CHECKIN") or text_upper.startswith("CHECKOUT"):
-        await update.message.reply_text(f"DEBUG: Bot đã nhận tin nhắn thường: {text}")
+    if text_upper.startswith("CHECKIN"):
+        staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
+
+        if not staff_name:
+            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN Tên")
+            return
+
+        now = datetime.now(TZ).strftime("%H:%M")
+        chat_id = str(update.effective_chat.id)
+        today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+
+        DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
+        DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
+        save_data(DATA)
+
+        await update.message.reply_text(
+            f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
+        )
+        return
+
+    if text_upper.startswith("CHECKOUT"):
+        staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
+        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+
+        if staff_list and staff_name not in staff_list:
+            await update.message.reply_text(
+                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
+                "Dùng /stafflist để xem tên hợp lệ."
+            )
+            return
+
+        if not staff_name:
+            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT Tên")
+            return
+
+        now = datetime.now(TZ).strftime("%H:%M")
+        chat_id = str(update.effective_chat.id)
+        today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+
+        DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
+        DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
+        save_data(DATA)
+
+        await update.message.reply_text(
+            f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
+        )
+        return
     if text_upper.startswith("THIẾU HÀNG -"):
         def get_field(field_name: str) -> str:
             for line in text.splitlines():
