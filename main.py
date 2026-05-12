@@ -427,6 +427,7 @@ if text_upper.startswith("CHECKIN"):
         )
         return
 
+
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
