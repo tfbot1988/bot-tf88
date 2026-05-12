@@ -508,7 +508,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý nếu cần nhập hàng.\n"
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
         )
-        return
+        
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), {})
