@@ -365,11 +365,41 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not update.message or not update.message.text:
         return
 
-    text = update.message.text.strip()
-    text_upper = text.upper()
-    if text_upper.startswith("DONE "):
-        await update.message.reply_text(f"DEBUG DONE nhận: {text}")
-    if text_upper.startswith("CHECKIN"):
+text = update.message.text.strip()
+text_upper = text.upper()
+if text_upper.startswith("DONE "):
+    body = text[5:].strip()
+
+    if " - " in body:
+        task_name, staff_name = body.split(" - ", 1)
+    else:
+        task_name = body
+        staff_name = update.effective_user.first_name or "Nhân viên"
+
+    task_name = task_name.strip()
+    staff_name = staff_name.strip()
+
+    if not task_name:
+        await update.message.reply_text("❌ Vui lòng ghi đúng: DONE TÊN VIỆC - Tên nhân viên")
+        return
+
+    now = datetime.now(TZ).strftime("%H:%M")
+    chat_id = str(update.effective_chat.id)
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+    done_key = task_name.upper()
+
+    DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
+    DATA["done"][chat_id][today_key][done_key] = {
+        "staff": staff_name,
+        "time": now,
+    }
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
+    )
+    return
+if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
 
