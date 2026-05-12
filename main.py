@@ -613,7 +613,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
     )
     return
-    async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     args = context.args
 
