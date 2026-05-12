@@ -367,6 +367,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     text = update.message.text.strip()
     text_upper = text.upper()
+    if text_upper.startswith("DONE "):
+        await update.message.reply_text(f"DEBUG DONE nhận: {text}")
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
