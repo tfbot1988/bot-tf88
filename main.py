@@ -531,7 +531,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu chi phí nếu cần."
         )
         return      
-              if text_upper.startswith("KIỂM KHO -"):
+    if text_upper.startswith("KIỂM KHO -"):
         def get_field(field_name: str) -> str:
             for line in text.splitlines():
                 if line.lower().startswith(field_name.lower() + ":"):
