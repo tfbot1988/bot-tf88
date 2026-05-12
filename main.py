@@ -360,48 +360,24 @@ def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
         if assigned_staff.strip() == staff_name.strip():
             return True
 
-    return False    
+return False    
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text:
         return
 
-text = update.message.text.strip()
-text_upper = text.upper()
-if text_upper.startswith("DONE "):
-    body = text[5:].strip()
-
-    if " - " in body:
-        task_name, staff_name = body.split(" - ", 1)
-    else:
-        task_name = body
-        staff_name = update.effective_user.first_name or "Nhân viên"
-
-    task_name = task_name.strip()
-    staff_name = staff_name.strip()
-
-    if not task_name:
-        await update.message.reply_text("❌ Vui lòng ghi đúng: DONE TÊN VIỆC - Tên nhân viên")
-        return
-
-    now = datetime.now(TZ).strftime("%H:%M")
+    text = update.message.text.strip()
+    text_upper = text.upper()
     chat_id = str(update.effective_chat.id)
     today_key = datetime.now(TZ).strftime("%Y-%m-%d")
-    done_key = task_name.upper()
+    now = datetime.now(TZ).strftime("%H:%M")
 
-    DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
-    DATA["done"][chat_id][today_key][done_key] = {
-        "staff": staff_name,
-        "time": now,
-    }
-    save_data(DATA)
-
-    await update.message.reply_text(
-        f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
-    )
-    return
-if text_upper.startswith("CHECKIN"):
+    if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
-        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        staff_list = DATA.get("staff", {}).get(chat_id, [])
+
+        if not staff_name:
+            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN Tên")
+            return
 
         if staff_list and staff_name not in staff_list:
             await update.message.reply_text(
@@ -409,14 +385,6 @@ if text_upper.startswith("CHECKIN"):
                 "Dùng /stafflist để xem tên hợp lệ."
             )
             return
-
-        if not staff_name:
-            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN Tên")
-            return
-
-        now = datetime.now(TZ).strftime("%H:%M")
-        chat_id = str(update.effective_chat.id)
-        today_key = datetime.now(TZ).strftime("%Y-%m-%d")
 
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
@@ -429,7 +397,11 @@ if text_upper.startswith("CHECKIN"):
 
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
-        staff_list = DATA.get("staff", {}).get(str(update.effective_chat.id), [])
+        staff_list = DATA.get("staff", {}).get(chat_id, [])
+
+        if not staff_name:
+            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT Tên")
+            return
 
         if staff_list and staff_name not in staff_list:
             await update.message.reply_text(
@@ -437,14 +409,6 @@ if text_upper.startswith("CHECKIN"):
                 "Dùng /stafflist để xem tên hợp lệ."
             )
             return
-
-        if not staff_name:
-            await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT Tên")
-            return
-
-        now = datetime.now(TZ).strftime("%H:%M")
-        chat_id = str(update.effective_chat.id)
-        today_key = datetime.now(TZ).strftime("%Y-%m-%d")
 
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
@@ -454,199 +418,36 @@ if text_upper.startswith("CHECKIN"):
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
         )
         return
-    if text_upper.startswith("THIẾU HÀNG -"):
-        def get_field(field_name: str) -> str:
-            for line in text.splitlines():
-                if line.lower().startswith(field_name.lower() + ":"):
-                    return line.split(":", 1)[1].strip()
-            return ""
 
-        first_line = text.splitlines()[0]
-        reporter = first_line.replace("THIẾU HÀNG -", "").strip()
+    if text_upper.startswith("DONE "):
+        body = text[5:].strip()
 
-        item = get_field("Mặt hàng")
-        remaining = get_field("Số lượng còn")
-        level = get_field("Mức độ")
-        enough_until = get_field("Dự kiến đủ dùng đến")
-        suggested = get_field("Đề xuất nhập thêm")
-        note = get_field("Ghi chú")
+        if " - " in body:
+            task_name, staff_name = body.split(" - ", 1)
+        else:
+            task_name = body
+            staff_name = update.effective_user.first_name or "Nhân viên"
 
-        if not item or not remaining or not level:
-            await update.message.reply_text(
-                "⚠️ BÁO THIẾU HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
-                "Vui lòng điền tối thiểu:\n"
-                "Mặt hàng:\n"
-                "Số lượng còn:\n"
-                "Mức độ:"
-            )
+        task_name = task_name.strip()
+        staff_name = staff_name.strip()
+
+        if not task_name:
+            await update.message.reply_text("❌ Vui lòng ghi đúng: DONE TÊN VIỆC - Tên nhân viên")
             return
 
-        await update.message.reply_text(
-            "✅ ĐÃ GHI NHẬN BÁO THIẾU HÀNG\n\n"
-            f"Người báo: {reporter or 'Chưa ghi'}\n"
-            f"Mặt hàng: {item}\n"
-            f"Số lượng còn: {remaining}\n"
-            f"Mức độ: {level}\n"
-            f"Dự kiến đủ dùng đến: {enough_until or 'Chưa ghi'}\n"
-            f"Đề xuất nhập thêm: {suggested or 'Chưa ghi'}\n"
-            f"Ghi chú: {note or 'Không có'}\n\n"
-            "Mr.Happy / Mr.Win vui lòng kiểm tra và xử lý."
-        )
-        return    
-    if text_upper.startswith("NHẬP HÀNG -"):
-        def get_field(field_name: str) -> str:
-            for line in text.splitlines():
-                if line.lower().startswith(field_name.lower() + ":"):
-                    return line.split(":", 1)[1].strip()
-            return ""
+        done_key = task_name.upper()
 
-        first_line = text.splitlines()[0]
-        receiver = first_line.replace("NHẬP HÀNG -", "").strip()
-
-        item = get_field("Mặt hàng")
-        quantity = get_field("Số lượng")
-        unit_price = get_field("Đơn giá")
-        total = get_field("Tổng tiền")
-        supplier = get_field("Nhà cung cấp")
-        expiry_date = get_field("Hạn sử dụng")
-        approver = get_field("Người duyệt")
-        note = get_field("Ghi chú")
-
-        if not item or not quantity:
-            await update.message.reply_text(
-                "⚠️ NHẬP HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
-                "Vui lòng điền tối thiểu:\n"
-                "Mặt hàng:\n"
-                "Số lượng:"
-            )
-            return
+        DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
+        DATA["done"][chat_id][today_key][done_key] = {
+            "staff": staff_name,
+            "time": now,
+        }
+        save_data(DATA)
 
         await update.message.reply_text(
-            "✅ ĐÃ GHI NHẬN NHẬP HÀNG\n\n"
-            f"Người nhập: {receiver or 'Chưa ghi'}\n"
-            f"Mặt hàng: {item}\n"
-            f"Số lượng: {quantity}\n"
-            f"Đơn giá: {unit_price or 'Chưa ghi'}\n"
-            f"Tổng tiền: {total or 'Chưa ghi'}\n"
-            f"Nhà cung cấp: {supplier or 'Chưa ghi'}\n"
-            f"Hạn sử dụng: {expiry_date or 'Chưa ghi'}\n"
-            f"Người duyệt: {approver or 'Miss Uyên'}\n"
-            f"Ghi chú: {note or 'Không có'}\n\n"
-            "Miss Uyên vui lòng kiểm tra, duyệt và chịu trách nhiệm cuối cùng.\n"
-            "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho và chi phí."
+            f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
         )
         return
-          
-    if text_upper.startswith("KIỂM KHO -"):
-        def get_field(field_name: str) -> str:
-            for line in text.splitlines():
-                if line.lower().startswith(field_name.lower() + ":"):
-                    return line.split(":", 1)[1].strip()
-            return ""
-
-        first_line = text.splitlines()[0]
-        check_date = first_line.replace("KIỂM KHO -", "").strip()
-
-        checker = get_field("Người kiểm")
-        enough_items = get_field("Các món còn đủ")
-        low_items = get_field("Các món sắp hết")
-        need_import = get_field("Các món cần nhập")
-        near_expiry = get_field("Hàng gần hết hạn")
-        damaged = get_field("Hàng hư hao / thất thoát nếu có")
-        note = get_field("Ghi chú")
-
-        if not checker:
-            await update.message.reply_text(
-                "⚠️ KIỂM KHO CHƯA ĐỦ THÔNG TIN\n\n"
-                "Vui lòng điền tối thiểu:\n"
-                "Người kiểm:\n"
-                "Các món sắp hết:\n"
-                "Các món cần nhập:"
-            )
-            return
-
-    alert_text = ""
-    if low_items:
-        alert_text = (
-            "\n\n⚠️ CẢNH BÁO HÀNG SẮP HẾT\n"
-            f"{low_items}"
-        )
-
-    expiry_alert_text = ""
-    if near_expiry:
-        expiry_alert_text = (
-            "\n\n📅 CẢNH BÁO HÀNG GẦN HẾT HẠN\n"
-            f"{near_expiry}"
-        )
-
-    await update.message.reply_text(
-            "✅ ĐÃ GHI NHẬN KIỂM KHO\n\n"
-            f"Ngày kiểm: {check_date or 'Chưa ghi'}\n"
-            f"Người kiểm: {checker or 'Chưa ghi'}\n"
-            f"Các món còn đủ: {enough_items or 'Chưa ghi'}\n"
-            f"Các món sắp hết: {low_items or 'Không có'}\n"
-            f"Các món cần nhập: {need_import or 'Không có'}\n"
-            f"Hàng gần hết hạn: {near_expiry or 'Không có'}\n"
-            f"Hư hao / thất thoát: {damaged or 'Không có'}\n"
-            f"Ghi chú: {note or 'Không có'}\n"
-            f"{alert_text}"
-            f"{expiry_alert_text}\n\n"
-            "Miss Uyên vui lòng kiểm tra và duyệt hướng xử lý nếu cần nhập hàng.\n"
-            "Mr.Happy / Mr.Win hỗ trợ đối chiếu kho."
-        )
-
-    if not text.upper().startswith("DONE "):
-        return
-
-    body = text[5:].strip()
-
-    if " - " in body:
-        task_name, staff_name = body.split(" - ", 1)
-    else:
-        task_name = body
-        staff_name = update.effective_user.first_name or "Nhân viên"
-
-    task_name = task_name.strip()
-    staff_name = staff_name.strip()
-    now = datetime.now(TZ).strftime("%H:%M")
-    chat_id = str(update.effective_chat.id)
-    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
-    done_key = task_name.upper()
-    reminders = DATA.get("chats", {}).get(chat_id, [])
-    today = datetime.now(TZ).weekday()
-
-    expected_keys = []
-    for item in reminders:
-        if today not in item.get("days", []):
-            continue
-
-        reminder_text = item.get("text", "")
-        if "DONE " not in reminder_text.upper():
-            continue
-        expected_key = extract_done_key(reminder_text)
-
-        if expected_key:
-            expected_keys.append(expected_key)
-
-    if expected_keys and done_key not in expected_keys:
-        await update.message.reply_text(
-            "❌ Tên việc chưa đúng với lịch nhắc hôm nay.\n\n"
-            "Vui lòng copy đúng phần sau chữ:\n"
-            "Xong reply: DONE ... - Tên\n\n"
-            "Các việc hợp lệ hôm nay:\n"
-            + "\n".join([f"- DONE {key} - Tên" for key in expected_keys])
-        )
-        return
-    DATA.setdefault("done", {}).setdefault(chat_id, {}).setdefault(today_key, {})
-    DATA["done"][chat_id][today_key][done_key] = {
-        "staff": staff_name,
-        "time": now,
-    }
-    save_data(DATA)
-    await update.message.reply_text(
-        f"✅ Đã ghi nhận: {staff_name} hoàn thành {task_name} lúc {now}"
-    )
-    return
 async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     args = context.args
