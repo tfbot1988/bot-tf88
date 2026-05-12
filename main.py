@@ -367,7 +367,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     text = update.message.text.strip()
     text_upper = text.upper()
-
+    if text_upper.startswith("CHECKIN") or text_upper.startswith("CHECKOUT"):
+        await update.message.reply_text(f"DEBUG: Bot đã nhận tin nhắn thường: {text}")
     if text_upper.startswith("THIẾU HÀNG -"):
         def get_field(field_name: str) -> str:
             for line in text.splitlines():
