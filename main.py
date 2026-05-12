@@ -589,6 +589,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             continue
 
         reminder_text = item.get("text", "")
+        if "DONE " not in reminder_text.upper():
+            continue
         expected_key = extract_done_key(reminder_text)
 
         if expected_key:
