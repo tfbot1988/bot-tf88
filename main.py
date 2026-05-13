@@ -531,6 +531,43 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             "Mr.Happy / Mr.Win hỗ trợ đối chiếu chi phí nếu cần."
         )
         return      
+    if text_upper.startswith("XUẤT KHO -"):
+        def get_field(field_name: str) -> str:
+            for line in text.splitlines():
+                if line.lower().startswith(field_name.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        first_line = text.splitlines()[0]
+        exporter = first_line.replace("XUẤT KHO -", "").strip()
+
+        item = get_field("Mặt hàng")
+        quantity = get_field("Số lượng xuất")
+        reason = get_field("Lý do")
+        shift = get_field("Ca")
+        note = get_field("Ghi chú")
+
+        if not item or not quantity:
+            await update.message.reply_text(
+                "⚠️ BÁO XUẤT KHO CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "Mặt hàng:\n"
+                "Số lượng xuất:"
+            )
+            return
+
+        await update.message.reply_text(
+            "✅ ĐÃ GHI NHẬN XUẤT KHO\n\n"
+            f"Người xuất: {exporter or 'Chưa ghi'}\n"
+            f"Mặt hàng: {item}\n"
+            f"Số lượng xuất: {quantity}\n"
+            f"Lý do: {reason or 'Chưa ghi'}\n"
+            f"Ca: {shift or 'Chưa ghi'}\n"
+            f"Ghi chú: {note or 'Không có'}\n\n"
+            "Mr.Happy / Mr.Win vui lòng đối chiếu tồn kho cuối ca.\n"
+            "Miss Uyên kiểm tra nếu phát sinh lệch kho."
+        )
+        return
     if text_upper.startswith("KIỂM KHO -"):
         def get_field(field_name: str) -> str:
             for line in text.splitlines():
