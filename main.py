@@ -52,6 +52,7 @@ def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 DATA = load_data()
+DATA.setdefault("fifo_stock", {})
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
