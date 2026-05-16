@@ -1737,7 +1737,16 @@ async def thieuhang_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Ghi chú:"
     )
 
-
+async def xuatkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "📤 MẪU XUẤT KHO TF\n\n"
+        "XUẤT KHO - Tên người xuất\n"
+        "Mặt hàng:\n"
+        "Số lượng xuất:\n"
+        "Lý do:\n"
+        "Ca:\n"
+        "Ghi chú:"
+    )
 async def kiemkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📋 MẪU KIỂM KHO TF\n\n"
