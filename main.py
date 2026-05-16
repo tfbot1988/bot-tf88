@@ -507,7 +507,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         expiry = get_field("Hạn sử dụng")
         approver = get_field("Người duyệt")
         note = get_field("Ghi chú")
-
+        fifo_stock = DATA.setdefault("fifo_stock", {})
         if not item or not quantity:
             await update.message.reply_text(
                 "⚠️ BÁO NHẬP HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
