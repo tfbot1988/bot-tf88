@@ -1698,6 +1698,7 @@ async def khohelp_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         "📌 CÁC LỆNH ĐANG DÙNG\n"
         "/tonkho - Xem tổng quan kho\n"
         "/nhaphang - Gửi mẫu nhập hàng\n"
+        "/xuatkho - Gửi mẫu xuất kho\n"
         "/thieuhang - Gửi mẫu báo thiếu hàng\n"
         "/kiemkho - Gửi mẫu kiểm kho\n"
         "/khohelp - Xem hướng dẫn sử dụng nhóm kho\n\n"
