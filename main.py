@@ -1808,6 +1808,7 @@ def main() -> None:
     app.add_handler(CommandHandler("khohelp", khohelp_cmd))
     app.add_handler(CommandHandler("nhaphang", nhaphang_cmd))
     app.add_handler(CommandHandler("thieuhang", thieuhang_cmd))
+    app.add_handler(CommandHandler("xuatkho", xuatkho_cmd))
     app.add_handler(CommandHandler("kiemkho", kiemkho_cmd))
     app.add_handler(CommandHandler("baocaokho", baocaokho_cmd))
     app.add_handler(CommandHandler("baocaokhotuan", baocaokhotuan_cmd))
