@@ -6,6 +6,8 @@ from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from lunardate import LunarDate
 from typing import Dict, List, Any
+import gspread
+from google.oauth2.service_account import Credentials
 
 from telegram import Update
 from telegram.ext import (
@@ -27,7 +29,19 @@ TOKEN = os.getenv("BOT_TOKEN")
 TZ_NAME = os.getenv("TZ", "Asia/Ho_Chi_Minh")
 TZ = ZoneInfo(TZ_NAME)
 DATA_FILE = Path(os.getenv("DATA_FILE", "/app/data/data.json"))
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+gs_client = None
 
+if GOOGLE_CREDENTIALS:
+    creds = Credentials.from_service_account_info(
+        json.loads(GOOGLE_CREDENTIALS),
+        scopes=SCOPES
+    )
+    gs_client = gspread.authorize(creds)
 DAY_MAP = {
     "mon": 0,
     "tue": 1,
@@ -390,7 +404,16 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
         save_data(DATA)
+        if gs_client:
+            sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
 
+            sheet.append_row([
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                staff_name,
+                now,
+                "",
+                ""
+            ])
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
         )
@@ -414,7 +437,15 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
+        if gs_client:
+            sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
 
+            records = sheet.get_all_records()
+
+            for i, row in enumerate(records, start=2):
+                if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and row["Nhân viên"] == staff_name:
+                    sheet.update_cell(i, 4, now)
+                    break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
         )
