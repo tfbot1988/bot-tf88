@@ -394,12 +394,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN Tên")
             return
 
-        if staff_list and staff_name not in staff_list:
+        unknown_staff = bool(staff_list and staff_name not in staff_list)
+
+        if unknown_staff:
             await update.message.reply_text(
-                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
-                "Dùng /stafflist để xem tên hợp lệ."
+                f"⚠️ {staff_name} chưa có trong danh sách nhân viên.\n"
+                "Bot vẫn ghi tạm. Mr.Win cần kiểm tra và duyệt lại."
             )
-            return
         attendance_today = DATA.get("attendance", {}).get(chat_id, {}).get(today_key, {})
 
         if (
@@ -438,12 +439,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT Tên")
             return
 
-        if staff_list and staff_name not in staff_list:
+        unknown_staff = bool(staff_list and staff_name not in staff_list)
+
+        if unknown_staff:
             await update.message.reply_text(
-                f"❌ Tên nhân viên chưa có trong danh sách: {staff_name}\n"
-                "Dùng /stafflist để xem tên hợp lệ."
-            )
-            return
+                f"⚠️ {staff_name} chưa có trong danh sách nhân viên.\n"
+                "Bot vẫn ghi tạm. Mr.Win cần kiểm tra và duyệt lại."
+        )
 
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
@@ -454,7 +456,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             records = sheet.get_all_records()
 
             for i, row in enumerate(records, start=2):
-                if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and row["Nhân viên"] == staff_name:
+                if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
                     sheet.update_cell(i, 4, now)
                     break
         await update.message.reply_text(
