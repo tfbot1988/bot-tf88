@@ -389,13 +389,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_list = DATA.get("staff", {}).get(chat_id, [])
-
+        print("STAFF LIST:", staff_list)
+        print("STAFF NAME:", staff_name)
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKIN Tên")
             return
 
-        unknown_staff = bool(staff_list and staff_name not in staff_list)
-
+        unknown_staff = staff_name not in staff_list
         if unknown_staff:
             await update.message.reply_text(
                 f"⚠️ {staff_name} chưa có trong danh sách nhân viên.\n"
