@@ -476,6 +476,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             for i, row in enumerate(records, start=2):
                 if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
                     sheet.update_cell(i, 4, now)
+                    sheet.update_cell(i, 5, f"=IF(AND(C{i}<>\"\",D{i}<>\"\"),(D{i}-C{i})*24,\"\")")
                     break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
