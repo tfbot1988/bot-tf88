@@ -447,7 +447,15 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Bot vẫn ghi tạm. Mr.Win cần kiểm tra và duyệt lại."
         )
         attendance_today = DATA.get("attendance", {}).get(chat_id, {}).get(today_key, {})
-
+        if (
+            staff_name not in attendance_today
+            or not attendance_today[staff_name].get("checkin")
+        ):
+            await update.message.reply_text(
+                f"⚠️ {staff_name} chưa CHECKIN.\n"
+                "Vui lòng CHECKIN trước."
+            )
+            return
         if (
             staff_name in attendance_today
             and attendance_today[staff_name].get("checkout")
