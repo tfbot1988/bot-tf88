@@ -446,7 +446,17 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 f"⚠️ {staff_name} chưa có trong danh sách nhân viên.\n"
                 "Bot vẫn ghi tạm. Mr.Win cần kiểm tra và duyệt lại."
         )
+        attendance_today = DATA.get("attendance", {}).get(chat_id, {}).get(today_key, {})
 
+        if (
+            staff_name in attendance_today
+            and attendance_today[staff_name].get("checkout")
+        ):
+            await update.message.reply_text(
+                f"⚠️ {staff_name} đã CHECKOUT rồi.\n"
+                "Không cần CHECKOUT lại."
+            )
+            return
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
