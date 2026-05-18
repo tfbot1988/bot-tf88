@@ -427,7 +427,6 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "",
                 "",
                 "",
-                "",
                 "Tên chưa duyệt" if unknown_staff else ""
             ])
         await update.message.reply_text(
