@@ -841,7 +841,7 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     try:
-        sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUmX7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
+        sheet = gs_client.open_by_key("1-2CUwuORi7L4H1UmX7n7uUvhMIFXL0_95PVp3_LGGe8").worksheet("01_Cham_Cong")
         records = sheet.get_all_records()
 
         if not records:
