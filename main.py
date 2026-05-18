@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
+from gspread import spreadsheet
 from lunardate import LunarDate
 from typing import Dict, List, Any
 import gspread
@@ -841,8 +842,7 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     try:
-        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4H1UmX7n7uUvhMIFXL0_95PVp3_LGGe8")
-        sheet = spreadsheet.sheet1
+        sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
         records = sheet.get_all_records()
         if not records:
             await update.message.reply_text("📋 Chưa có dữ liệu chấm công.")
@@ -851,6 +851,7 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         lines = ["📋 BẢNG CHẤM CÔNG GẦN ĐÂY", ""]
 
         recent_records = records[-20:]
+
 
         for row in recent_records:
             ngay = row.get("Ngày", "")
