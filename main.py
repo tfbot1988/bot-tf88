@@ -461,15 +461,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 "Vui lòng CHECKIN trước."
             )
             return
-        if (
-            staff_name in attendance_today
-            and attendance_today[staff_name].get("checkout")
-        ):
-            await update.message.reply_text(
-                f"⚠️ {staff_name} đã CHECKOUT rồi.\n"
-                "Không cần CHECKOUT lại."
-            )
-            return
+        
+        DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
@@ -481,7 +474,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             for i, row in enumerate(records, start=2):
                 if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
                     sheet.update_cell(i, 4, now)
-                    sheet.update_cell(i, 5, f'=IF(AND(C{i}<>"";D{i}<>"");(D{i}-C{i})*24;"")')
+                    sheet.update_cell(i, 5, f'=IF(AND(C{i}<>"",D{i}<>""),TEXT(D{i}-C{i},"[h]:mm"),"")')
                     break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
