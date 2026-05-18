@@ -434,6 +434,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
+
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
         staff_name = staff_name.strip().title()
@@ -835,30 +836,40 @@ async def todaywork_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     await update.message.reply_text("\n".join(lines))
 async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = str(update.effective_chat.id)
-    attendance_all = DATA.get("attendance", {}).get(chat_id, {})
-
-    if not attendance_all:
-        await update.message.reply_text("📊 Chưa có dữ liệu chấm công.")
+    if not gs_client:
+        await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
         return
 
-    recent_days = sorted(attendance_all.keys())[-7:]
-    lines = ["📊 BẢNG CHẤM CÔNG 7 NGÀY GẦN ĐÂY", ""]
+    try:
+        sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUmX7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
+        records = sheet.get_all_records()
 
-    for day_key in recent_days:
-        lines.append(f"📅 {day_key}")
-        day_data = attendance_all.get(day_key, {})
+        if not records:
+            await update.message.reply_text("📋 Chưa có dữ liệu chấm công.")
+            return
 
-        for staff_name, record in day_data.items():
-            checkin = record.get("checkin", "Chưa có")
-            checkout = record.get("checkout", "Chưa có")
+        lines = ["📋 BẢNG CHẤM CÔNG GẦN ĐÂY", ""]
 
-            lines.append(f"{staff_name}")
+        recent_records = records[-20:]
+
+        for row in recent_records:
+            ngay = row.get("Ngày", "")
+            staff = row.get("Nhân viên", "")
+            checkin = row.get("Checkin", "")
+            checkout = row.get("Checkout", "")
+            duration = row.get("Thời lượng", "")
+
+            lines.append(f"📅 {ngay}")
+            lines.append(f"👤 {staff}")
             lines.append(f"- CHECKIN: {checkin}")
             lines.append(f"- CHECKOUT: {checkout}")
+            lines.append(f"- Thời lượng: {duration}")
             lines.append("")
 
-    await update.message.reply_text("\n".join(lines))
+        await update.message.reply_text("\n".join(lines))
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
 async def staffadd_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_name = " ".join(context.args).strip()
