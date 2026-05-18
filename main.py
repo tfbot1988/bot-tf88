@@ -841,9 +841,9 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     try:
-        sheet = gs_client.open_by_key("1-2CUwuORi7L4H1UmX7n7uUvhMIFXL0_95PVp3_LGGe8").sheet1
+        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4H1UmX7n7uUvhMIFXL0_95PVp3_LGGe8")
+        sheet = spreadsheet.sheet1
         records = sheet.get_all_records()
-
         if not records:
             await update.message.reply_text("📋 Chưa có dữ liệu chấm công.")
             return
