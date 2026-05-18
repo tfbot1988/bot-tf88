@@ -426,6 +426,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 now,
                 "",
                 "",
+                "",
+                "",
                 "Tên chưa duyệt" if unknown_staff else ""
             ])
         await update.message.reply_text(
@@ -491,6 +493,18 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                         [[float(total_hours)]],
                         value_input_option="RAW"
                     )
+                    total_minutes = int((checkout_time - checkin_time).seconds / 60)
+                    hours = total_minutes // 60
+                    minutes = total_minutes % 60
+
+                    if hours > 0 and minutes > 0:
+                        duration_text = f"{hours} giờ {minutes} phút"
+                    elif hours > 0:
+                        duration_text = f"{hours} giờ"
+                    else:
+                        duration_text = f"{minutes} phút"
+
+                    sheet.update_cell(i, 6, duration_text)
                     break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
