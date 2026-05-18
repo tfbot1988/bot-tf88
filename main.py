@@ -474,7 +474,23 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             for i, row in enumerate(records, start=2):
                 if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
                     sheet.update_cell(i, 4, now)
-                    sheet.update_cell(i, 5, f'=IF(AND(C{i}<>"",D{i}<>""),TEXT(D{i}-C{i},"[h]:mm"),"")')
+
+                    checkin_time = datetime.strptime(row["Checkin"], "%H:%M")
+                    checkout_time = datetime.strptime(now, "%H:%M")
+                    total_hours = round((checkout_time - checkin_time).seconds / 3600, 2)
+
+                    sheet.format("E:E", {
+                        "numberFormat": {
+                            "type": "NUMBER",
+                            "pattern": "0.00"
+                        }
+                    })
+
+                    sheet.update(
+                        f"E{i}",
+                        [[float(total_hours)]],
+                        value_input_option="RAW"
+                    )
                     break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
