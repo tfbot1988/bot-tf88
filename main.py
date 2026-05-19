@@ -1026,6 +1026,16 @@ async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("PAYROLLWEEK RUNNING")
     rate = 30000
+    chat_id = str(update.effective_chat.id)
+    now_ts = datetime.now(TZ).timestamp()
+
+    last_run = DATA.setdefault("payroll_lock", {}).get(chat_id, 0)
+    if now_ts - last_run < 5:
+        await update.message.reply_text("⏳ Vui lòng chờ vài giây rồi bấm lại /payrollweek.")
+        return
+
+    DATA["payroll_lock"][chat_id] = now_ts
+    save_data(DATA)
     try:
         spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
         sheet = spreadsheet.worksheet("01_Cham_Cong")
