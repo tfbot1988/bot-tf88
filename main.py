@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime, time, timedelta
+from turtle import update
 from zoneinfo import ZoneInfo
 from gspread import spreadsheet
 from lunardate import LunarDate
@@ -1023,45 +1024,57 @@ async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"Từ nay /checkshift ở nhóm này sẽ lấy lịch ca từ nhóm xếp ca đã liên kết."
     )
 async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
     rate = 30000
+    try:
+        sheet = gs_client.open_by_key("1-2CUwuORi7L4H1UmX7n7uUvhMIFXL0_95PVp3_LGGe8").sheet1
+        records = sheet.get_all_records()
 
-    now_dt = datetime.now(TZ)
-    attendance_all = DATA.get("attendance", {}).get(chat_id, {})
-
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
+        return
     totals = {}
     issues = []
 
-    for i in range(7):
-        day_dt = datetime.fromtimestamp(now_dt.timestamp() - i * 86400, TZ)
-        day_key = day_dt.strftime("%Y-%m-%d")
-        day_data = attendance_all.get(day_key, {})
+    recent_records = records[-50:]
 
-        for staff_name, record in day_data.items():
-            checkin = record.get("checkin")
-            checkout = record.get("checkout")
+    for row in recent_records:
 
-            if not checkin or not checkout:
-                issues.append(f"- {staff_name} ngày {day_key}: thiếu CHECKIN hoặc CHECKOUT")
+        staff_name = row.get("Nhân viên", "")
+        checkin = row.get("Checkin", "")
+        checkout = row.get("Checkout", "")
+        duration_text = row.get("Thời lượng", "")
+
+        if not staff_name:
+            continue
+
+        if not checkin or not checkout:
+            issues.append(f"- {staff_name}: thiếu CHECKIN/CHECKOUT")
+            continue
+
+        try:
+            minutes = 0
+
+            if "phút" in duration_text:
+                minutes = int(duration_text.replace("phút", "").strip())
+
+            elif "giờ" in duration_text:
+                parts = duration_text.split("giờ")
+                hours = int(parts[0].strip())
+
+                mins = 0
+                if len(parts) > 1 and "phút" in parts[1]:
+                    mins = int(parts[1].replace("phút", "").strip())
+
+                minutes = hours * 60 + mins
+
+            if minutes <= 0:
                 continue
 
-            try:
-                checkin_dt = datetime.strptime(checkin, "%H:%M")
-                checkout_dt = datetime.strptime(checkout, "%H:%M")
-                minutes = int((checkout_dt - checkin_dt).total_seconds() / 60)
+            totals.setdefault(staff_name, 0)
+            totals[staff_name] += minutes
 
-                if minutes <= 0:
-                    issues.append(f"- {staff_name} ngày {day_key}: giờ CHECKOUT không hợp lệ")
-                    continue
-
-                totals.setdefault(staff_name, 0)
-                totals[staff_name] += minutes
-
-            except Exception:
-                issues.append(f"- {staff_name} ngày {day_key}: dữ liệu giờ không hợp lệ")
-
-    lines = ["💰 BẢNG LƯƠNG TẠM 7 NGÀY GẦN ĐÂY", ""]
-
+        except Exception:
+            issues.append(f"- {staff_name}: dữ liệu thời lượng lỗi")
     if totals:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
