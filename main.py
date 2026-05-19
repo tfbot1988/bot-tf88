@@ -1036,6 +1036,9 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     totals = {}
     issues = []
+    lines = [f"💰 BẢNG LƯƠNG TẠM TUẦN NÀY", ""]
+
+
 
     recent_records = records[-50:]
 
