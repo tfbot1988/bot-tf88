@@ -1024,6 +1024,7 @@ async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"Từ nay /checkshift ở nhóm này sẽ lấy lịch ca từ nhóm xếp ca đã liên kết."
     )
 async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("PAYROLLWEEK RUNNING")
     rate = 30000
     try:
         spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
