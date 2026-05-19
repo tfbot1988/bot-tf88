@@ -1080,12 +1080,23 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         except Exception:
             issues.append(f"- {staff_name}: dữ liệu thời lượng lỗi")
+    try:
+        salary_sheet = spreadsheet.worksheet("02_Tinh_Luong")
+    except Exception:
+        salary_sheet = None
     if totals:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
             mins = minutes % 60
             salary = round((minutes / 60) * rate)
-
+            if salary_sheet:
+                salary_sheet.append_row([
+                    datetime.now(TZ).strftime("%d/%m/%Y"),
+                    staff_name,
+                    f"{hours} giờ {mins} phút",
+                    salary,
+                    "Tạm tính tuần"
+                ])
             lines.append(f"👤 {staff_name}")
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
