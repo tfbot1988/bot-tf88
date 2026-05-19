@@ -1100,6 +1100,7 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             hours = minutes // 60
             mins = minutes % 60
             salary = round((minutes / 60) * rate)
+            total_payroll += salary
             if salary_sheet:
                 payroll_date = datetime.now(TZ).strftime("%d/%m/%Y")
                 salary_records = salary_sheet.get_all_records()
