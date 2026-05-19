@@ -1026,7 +1026,8 @@ async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rate = 30000
     try:
-        sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
+        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
+        sheet = spreadsheet.worksheet("01_Cham_Cong")
         records = sheet.get_all_records()
 
     except Exception as e:
