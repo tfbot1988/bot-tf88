@@ -1114,9 +1114,13 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         salary,
                         "Tạm tính tuần"
                     ])
+                    sheet_status = "Đã ghi vào 02_Tinh_Luong"
+                else:
+                    sheet_status = "Đã có trong 02_Tinh_Luong, không ghi trùng"
             lines.append(f"👤 {staff_name}")
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
+            lines.append(f"- Sheet: {sheet_status}")
             lines.append("")
     else:
         lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương.")
