@@ -1093,12 +1093,18 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 payroll_date = datetime.now(TZ).strftime("%d/%m/%Y")
                 salary_records = salary_sheet.get_all_records()
 
-                already_exists = any(
-                    payroll_date in str(row.get("Ngày", "")).strip()
-                    and staff_name in str(row.get("Nhân viên", "")).strip()
-                    and "Tạm tính tuần" in str(row.get("Ghi chú", "")).strip()
-                    for row in salary_records
-                )
+                already_exists = False
+
+                for row in salary_records:
+                    row_text = str(row)
+
+                    if (
+                        payroll_date in row_text
+                        and staff_name in row_text
+                        and "Tạm tính tuần" in row_text
+                    ):
+                        already_exists = True
+                        break
 
                 if not already_exists:
                     salary_sheet.append_row([
