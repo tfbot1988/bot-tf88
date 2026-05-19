@@ -1034,8 +1034,8 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⏳ Vui lòng chờ vài giây rồi bấm lại /payrollweek.")
         return
 
+    DATA.setdefault("payroll_lock", {})
     DATA["payroll_lock"][chat_id] = now_ts
-    save_data(DATA)
     try:
         spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
         sheet = spreadsheet.worksheet("01_Cham_Cong")
