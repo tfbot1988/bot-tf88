@@ -1090,13 +1090,24 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             mins = minutes % 60
             salary = round((minutes / 60) * rate)
             if salary_sheet:
-                salary_sheet.append_row([
-                    datetime.now(TZ).strftime("%d/%m/%Y"),
-                    staff_name,
-                    f"{hours} giờ {mins} phút",
-                    salary,
-                    "Tạm tính tuần"
-                ])
+                payroll_date = datetime.now(TZ).strftime("%d/%m/%Y")
+                salary_records = salary_sheet.get_all_records()
+
+                already_exists = any(
+                    str(row.get("Ngày", "")) == payroll_date
+                    and str(row.get("Nhân viên", "")) == staff_name
+                    and str(row.get("Ghi chú", "")) == "Tạm tính tuần"
+                    for row in salary_records
+                )
+
+                if not already_exists:
+                    salary_sheet.append_row([
+                        payroll_date,
+                        staff_name,
+                        f"{hours} giờ {mins} phút",
+                        salary,
+                        "Tạm tính tuần"
+                    ])
             lines.append(f"👤 {staff_name}")
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
