@@ -1094,6 +1094,7 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         salary_sheet = spreadsheet.worksheet("02_Tinh_Luong")
     except Exception:
         salary_sheet = None
+    total_payroll = 0
     if totals:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
@@ -1135,7 +1136,9 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương.")
         lines.append("")
-
+    if totals:
+        lines.append(f"💰 Tổng payroll tuần: {total_payroll:,}đ".replace(",", "."))
+        lines.append("")
     if issues:
         lines.append("⚠️ Dữ liệu cần Mr.Win kiểm tra:")
         lines.extend(issues)
