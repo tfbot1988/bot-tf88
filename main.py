@@ -68,6 +68,7 @@ def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 DATA = load_data()
+PAYROLL_LOCK = {}
 DATA.setdefault("fifo_stock", {})
 
 def normalize_days(days: str) -> List[int]:
@@ -1029,13 +1030,12 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     now_ts = datetime.now(TZ).timestamp()
 
-    last_run = DATA.setdefault("payroll_lock", {}).get(chat_id, 0)
+    last_run = PAYROLL_LOCK.get(chat_id, 0)
+
     if now_ts - last_run < 5:
         await update.message.reply_text("⏳ Vui lòng chờ vài giây rồi bấm lại /payrollweek.")
         return
-
-    DATA.setdefault("payroll_lock", {})
-    DATA["payroll_lock"][chat_id] = now_ts
+    PAYROLL_LOCK[chat_id] = now_ts
     try:
         spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
         sheet = spreadsheet.worksheet("01_Cham_Cong")
