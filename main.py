@@ -1094,9 +1094,9 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 salary_records = salary_sheet.get_all_records()
 
                 already_exists = any(
-                    str(row.get("Ngày", "")) == payroll_date
-                    and str(row.get("Nhân viên", "")) == staff_name
-                    and str(row.get("Ghi chú", "")) == "Tạm tính tuần"
+                    str(row.get("Ngày", "")).strip() == payroll_date
+                    and str(row.get("Nhân viên", "")).strip() == staff_name
+                    and "Tạm tính tuần" in str(row.get("Ghi chú", ""))
                     for row in salary_records
                 )
 
