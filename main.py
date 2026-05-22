@@ -1026,6 +1026,11 @@ async def linkshiftgroup_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
 async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("PAYROLLWEEK RUNNING")
+    member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
+
+    if member.status not in ["administrator", "creator"]:
+        await update.message.reply_text("⛔ Chỉ admin mới được xem bảng lương.")
+        return
     rate = 30000
     chat_id = str(update.effective_chat.id)
     now_ts = datetime.now(TZ).timestamp()
