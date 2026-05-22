@@ -1165,51 +1165,60 @@ async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     rate = 30000
+    member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
+
+    if member.status not in ["administrator", "creator"]:
+        await update.message.reply_text("⛔ Chỉ admin mới được xem bảng lương tháng.")
+        return
 
     now_dt = datetime.now(TZ)
     current_month = now_dt.strftime("%Y-%m")
-    attendance_all = DATA.get("attendance", {}).get(chat_id, {})
-    salary_data = DATA.get("salary", {}).get(chat_id, {})
+    try:
+        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
+        sheet = spreadsheet.worksheet("01_Cham_Cong")
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
+        return
     totals = {}
     issues = []
+    for row in records:
+        date_text = str(row.get("Ngày", "")).strip()
+        staff_name = str(row.get("Nhân viên", "")).strip()
+        duration_text = str(row.get("Thời lượng", "")).strip()
 
-    for day_key, day_data in attendance_all.items():
-        if not day_key.startswith(current_month):
+        if not date_text or not staff_name or not duration_text:
             continue
 
-        for staff_name, record in day_data.items():
-            salary_type = salary_data.get(staff_name, {}).get("type", "hourly")
-            if salary_type == "fixed":
+        if not date_text.endswith(now_dt.strftime("%Y")) or not date_text[3:5] == now_dt.strftime("%m"):
+            continue
+        try:
+            hours = 0
+            mins = 0
+
+            if "giờ" in duration_text:
+                parts = duration_text.split("giờ")
+                hours = int(parts[0].strip())
+                if len(parts) > 1 and "phút" in parts[1]:
+                    mins = int(parts[1].replace("phút", "").strip())
+            elif "phút" in duration_text:
+                mins = int(duration_text.replace("phút", "").strip())
+
+            minutes = hours * 60 + mins
+
+            if minutes <= 0:
                 continue
-            checkin = record.get("checkin")
-            checkout = record.get("checkout")
 
-            if not checkin or not checkout:
-                issues.append(f"- {staff_name} ngày {day_key}: thiếu CHECKIN hoặc CHECKOUT")
-                continue
+            totals.setdefault(staff_name, 0)
+            totals[staff_name] += minutes
 
-            try:
-                checkin_dt = datetime.strptime(checkin, "%H:%M")
-                checkout_dt = datetime.strptime(checkout, "%H:%M")
-                minutes = int((checkout_dt - checkin_dt).total_seconds() / 60)
-
-                if minutes <= 0:
-                    issues.append(f"- {staff_name} ngày {day_key}: giờ CHECKOUT không hợp lệ")
-                    continue
-
-                totals.setdefault(staff_name, 0)
-                totals[staff_name] += minutes
-
-            except Exception:
-                issues.append(f"- {staff_name} ngày {day_key}: dữ liệu giờ không hợp lệ")
-
+        except Exception:
+            issues.append(f"- {staff_name}: dữ liệu thời lượng lỗi")
+                
+   
     lines = [f"💰 BẢNG LƯƠNG TẠM THÁNG {now_dt.strftime('%m/%Y')}", ""]
-    fixed_staff = []
-    for staff_name, info in salary_data.items():
-        if info.get("type") == "fixed":
-            fixed_salary = info.get("fixed_salary", 0)
-            fixed_staff.append((staff_name, fixed_salary))
-    if totals or fixed_staff:
+    
+    if totals :
         for staff_name, minutes in totals.items():
             hours = minutes // 60
             mins = minutes % 60
@@ -1219,12 +1228,7 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
             lines.append("")
-        for staff_name, fixed_salary in fixed_staff:
-            lines.append(f"👤 {staff_name}")
-            lines.append("- Loại lương: Lương cứng")
-            lines.append(f"- Lương tháng: {fixed_salary:,}đ".replace(",", "."))
-            lines.append("- Ghi chú: CHECKIN / CHECKOUT dùng để theo dõi ngày công")
-            lines.append("")
+        
     else:
         lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương tháng.")
         lines.append("")
