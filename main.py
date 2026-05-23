@@ -1310,6 +1310,7 @@ async def fixedsalary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     DATA["salary"][chat_id].setdefault(staff_name, {})
     DATA["salary"][chat_id][staff_name]["type"] = "fixed"
     DATA["salary"][chat_id][staff_name]["fixed_salary"] = amount
+    print(DATA["salary"])
     save_data(DATA)
 
     await update.message.reply_text(
