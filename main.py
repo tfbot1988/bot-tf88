@@ -1162,7 +1162,7 @@ async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE
         "Các lệnh CHECKIN / CHECKOUT vẫn dùng bình thường.\n"
         "Nhân viên có thể bắt đầu chấm công lại từ đầu."
     )
-async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     rate = 30000
     member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
@@ -1222,7 +1222,8 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if info.get("type") == "fixed":
             fixed_salary = info.get("fixed_salary", 0)
             fixed_staff.append((staff_name, fixed_salary))
-    lines = [f"✅ BẢNG LƯƠNG CHỐT THÁNG {now_dt.strftime('%m/%Y')}", ""]    
+    lines = [f"💰 BẢNG LƯƠNG TẠM THÁNG {now_dt.strftime('%m/%Y')}", ""]
+    
     if totals or fixed_staff:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
@@ -1232,7 +1233,7 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             already_exists = any(
                 now_dt.strftime("%m/%Y") in str(row)
                 and staff_name in str(row)
-                and "Chốt lương tháng" in str(row)
+                and "Tạm tính tháng" in str(row)
                 for row in salary_records
             )
 
@@ -1242,7 +1243,7 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     staff_name,
                     f"{hours} giờ {mins} phút",
                     salary,
-                    "Chốt lương tháng"
+                    "Tạm tính tháng"
                 ])
 
             lines.append(f"👤 {staff_name}")
@@ -2021,7 +2022,6 @@ def main() -> None:
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
-    app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
