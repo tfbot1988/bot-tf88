@@ -1264,7 +1264,7 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.extend(issues)
 
     await update.message.reply_text("\n".join(lines))
-async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE): 
     chat_id = str(update.effective_chat.id)
     now_dt = datetime.now(TZ)
     final_key = now_dt.strftime("%Y-%m")
@@ -1283,6 +1283,29 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✅ Đã chốt bảng lương tháng."
     )
+async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    now_dt = datetime.now(TZ)
+    final_key = now_dt.strftime("%Y-%m")
+
+    if "payroll_final_lock" not in DATA:
+        DATA["payroll_final_lock"] = {}
+
+    if chat_id not in DATA["payroll_final_lock"]:
+        DATA["payroll_final_lock"][chat_id] = {}
+
+    if DATA["payroll_final_lock"][chat_id].get(final_key):
+        del DATA["payroll_final_lock"][chat_id][final_key]
+        save_data(DATA)
+
+        await update.message.reply_text(
+            f"🔓 Đã mở khóa bảng lương tháng {final_key}"
+        )
+    else:
+        await update.message.reply_text(
+            "⚠️ Tháng này chưa bị khóa."
+        )
 async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -2041,6 +2064,7 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
+    app.add_handler(CommandHandler("payrollunlock", payrollunlock_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
