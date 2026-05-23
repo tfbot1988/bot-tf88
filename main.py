@@ -1329,11 +1329,54 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    try:
+        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
+        sheet = spreadsheet.worksheet("01_Cham_Cong")
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
+        return
+
+    total_minutes = 0
+
+    for row in records:
+        date_text = str(row.get("Ngày", "")).strip()
+        name_text = str(row.get("Nhân viên", "")).strip()
+        duration_text = str(row.get("Thời lượng", "")).strip()
+
+        if name_text != staff_name:
+            continue
+
+        if not date_text.endswith(now_dt.strftime("%Y")) or date_text[3:5] != now_dt.strftime("%m"):
+            continue
+
+        try:
+            hours = 0
+            mins = 0
+
+            if "giờ" in duration_text:
+                parts = duration_text.split("giờ")
+                hours = int(parts[0].strip())
+                if len(parts) > 1 and "phút" in parts[1]:
+                    mins = int(parts[1].replace("phút", "").strip())
+            elif "phút" in duration_text:
+                mins = int(duration_text.replace("phút", "").strip())
+
+            total_minutes += hours * 60 + mins
+        except Exception:
+            pass
+
+    hours = total_minutes // 60
+    mins = total_minutes % 60
+    salary = round((total_minutes / 60) * 30000)
+
     await update.message.reply_text(
         f"🧾 PHIẾU LƯƠNG {now_dt.strftime('%m/%Y')}\n\n"
         f"👤 Nhân viên: {staff_name}\n"
         f"- Loại lương: Theo giờ\n"
-        f"- Ghi chú: bản đầu tiên, bước sau sẽ cộng giờ từ Google Sheet."
+        f"- Tổng giờ: {hours} giờ {mins} phút\n"
+        f"- Đơn giá: 30.000đ/h\n"
+        f"- Lương tạm: {salary:,}đ".replace(",", ".")
     )
 async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
