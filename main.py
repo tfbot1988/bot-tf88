@@ -1265,6 +1265,19 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n".join(lines))
 async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    now_dt = datetime.now(TZ)
+    final_key = now_dt.strftime("%Y-%m")
+
+    DATA.setdefault("payroll_final_lock", {}).setdefault(chat_id, {})
+
+    if DATA["payroll_final_lock"][chat_id].get(final_key):
+        await update.message.reply_text("⚠️ Bảng lương tháng này đã được chốt trước đó.")
+        return
+
+    DATA["payroll_final_lock"][chat_id][final_key] = True
+    save_data(DATA)
+
     await payrollmonth_cmd(update, context)
 
     await update.message.reply_text(
