@@ -1182,6 +1182,8 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     totals = {}
     issues = []
+    salary_data = DATA.get("salary", {}).get(chat_id, {})
+    fixed_staff = []    
     for row in records:
         date_text = str(row.get("Ngày", "")).strip()
         staff_name = str(row.get("Nhân viên", "")).strip()
@@ -1215,10 +1217,13 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             issues.append(f"- {staff_name}: dữ liệu thời lượng lỗi")
                 
-   
+    for staff_name, info in salary_data.items():
+        if info.get("type") == "fixed":
+            fixed_salary = info.get("fixed_salary", 0)
+            fixed_staff.append((staff_name, fixed_salary))
     lines = [f"💰 BẢNG LƯƠNG TẠM THÁNG {now_dt.strftime('%m/%Y')}", ""]
     
-    if totals :
+    if totals or fixed_staff:
         for staff_name, minutes in totals.items():
             hours = minutes // 60
             mins = minutes % 60
@@ -1228,7 +1233,12 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
             lines.append(f"- Lương tạm: {salary:,}đ".replace(",", "."))
             lines.append("")
-        
+        for staff_name, fixed_salary in fixed_staff:
+            lines.append(f"👤 {staff_name}")
+            lines.append("- Loại lương: Lương cứng")
+            lines.append(f"- Lương tháng: {fixed_salary:,}đ".replace(",", "."))
+            lines.append("")
+            
     else:
         lines.append("Chưa có dữ liệu đủ CHECKIN/CHECKOUT để tính lương tháng.")
         lines.append("")
