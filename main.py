@@ -1306,6 +1306,35 @@ async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ Tháng này chưa bị khóa."
         )
+async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("⚠️ Cú pháp: /payslip Tên_nhân_viên")
+        return
+
+    staff_name = " ".join(context.args).strip()
+    chat_id = str(update.effective_chat.id)
+    now_dt = datetime.now(TZ)
+
+    salary_data = DATA.get("salary", {}).get(chat_id, {})
+    staff_salary = salary_data.get(staff_name, {})
+
+    if staff_salary.get("type") == "fixed":
+        fixed_salary = staff_salary.get("fixed_salary", 0)
+
+        await update.message.reply_text(
+            f"🧾 PHIẾU LƯƠNG {now_dt.strftime('%m/%Y')}\n\n"
+            f"👤 Nhân viên: {staff_name}\n"
+            f"- Loại lương: Lương cứng\n"
+            f"- Lương tháng: {fixed_salary:,}đ".replace(",", ".")
+        )
+        return
+
+    await update.message.reply_text(
+        f"🧾 PHIẾU LƯƠNG {now_dt.strftime('%m/%Y')}\n\n"
+        f"👤 Nhân viên: {staff_name}\n"
+        f"- Loại lương: Theo giờ\n"
+        f"- Ghi chú: bản đầu tiên, bước sau sẽ cộng giờ từ Google Sheet."
+    )
 async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -2065,6 +2094,7 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
     app.add_handler(CommandHandler("payrollunlock", payrollunlock_cmd))
+    app.add_handler(CommandHandler("payslip", payslip_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
