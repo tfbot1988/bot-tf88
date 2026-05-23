@@ -2021,6 +2021,7 @@ def main() -> None:
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
+    app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
