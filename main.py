@@ -1177,6 +1177,7 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
         sheet = spreadsheet.worksheet("01_Cham_Cong")
         records = sheet.get_all_records()
+        salary_sheet = spreadsheet.worksheet("02_Tinh_Luong")
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
         return
@@ -1228,6 +1229,22 @@ async def payrollmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             hours = minutes // 60
             mins = minutes % 60
             salary = round((minutes / 60) * rate)
+            salary_records = salary_sheet.get_all_records()
+            already_exists = any(
+                now_dt.strftime("%m/%Y") in str(row)
+                and staff_name in str(row)
+                and "Tạm tính tháng" in str(row)
+                for row in salary_records
+            )
+
+            if not already_exists:
+                salary_sheet.append_row([
+                    now_dt.strftime("%d/%m/%Y"),
+                    staff_name,
+                    f"{hours} giờ {mins} phút",
+                    salary,
+                    "Tạm tính tháng"
+                ])
 
             lines.append(f"👤 {staff_name}")
             lines.append(f"- Tổng giờ: {hours} giờ {mins} phút")
