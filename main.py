@@ -1369,6 +1369,11 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hours = total_minutes // 60
     mins = total_minutes % 60
     salary = round((total_minutes / 60) * 30000)
+    bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
+    advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
+    fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
+
+    final_salary = salary + bonus - advance - fine
 
     await update.message.reply_text(
         f"🧾 PHIẾU LƯƠNG {now_dt.strftime('%m/%Y')}\n\n"
@@ -1376,7 +1381,13 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"- Loại lương: Theo giờ\n"
         f"- Tổng giờ: {hours} giờ {mins} phút\n"
         f"- Đơn giá: 30.000đ/h\n"
-        f"- Lương tạm: {salary:,}đ".replace(",", ".")
+        f"- Lương tạm: {salary:,}đ\n"
+        f"- Thưởng: {bonus:,}đ\n"
+        f"- Ứng lương: {advance:,}đ\n"
+        f"- Phạt: {fine:,}đ\n"
+        f"-------------------\n"
+        f"💰 Thực nhận: {final_salary:,}đ"
+        .replace(",", ".")
     )
 async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
