@@ -1476,6 +1476,32 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎉 Đã cộng thưởng cho {staff_name}: "
         f"{amount:,}đ".replace(",", ".")
     )
+async def advance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Cú pháp: /advance Tên_nhân_viên số_tiền")
+        return
+
+    staff_name = context.args[0]
+
+    try:
+        amount = int(context.args[1])
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ.")
+        return
+
+    chat_id = str(update.effective_chat.id)
+
+    DATA.setdefault("advance", {}).setdefault(chat_id, {})
+    DATA["advance"][chat_id][staff_name] = (
+        DATA["advance"][chat_id].get(staff_name, 0) + amount
+    )
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"💸 Đã ghi ứng lương cho {staff_name}: "
+        f"{amount:,}đ".replace(",", ".")
+    )   
 async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     salary_data = DATA.get("salary", {}).get(chat_id, {})
@@ -2169,6 +2195,7 @@ def main() -> None:
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
     app.add_handler(CommandHandler("bonus", bonus_cmd))
+    app.add_handler(CommandHandler("advance", advance_cmd))
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
