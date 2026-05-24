@@ -1466,7 +1466,7 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    staff_name = context.args[0].strip().title()]
+    staff_name = context.args[0].strip().title()
     
     try:
         amount = int(context.args[1])
