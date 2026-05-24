@@ -1586,10 +1586,18 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     salary_data = DATA.get("salary", {}).get(chat_id, {})
 
     all_staff = set()
-    all_staff.update(salary_data.keys())
-    all_staff.update(DATA.get("bonus", {}).get(chat_id, {}).keys())
-    all_staff.update(DATA.get("advance", {}).get(chat_id, {}).keys())
-    all_staff.update(DATA.get("fine", {}).get(chat_id, {}).keys())
+
+    for row in DATA.get("salary", {}).get(chat_id, {}):
+        all_staff.add(row)
+
+    for row in DATA.get("bonus", {}).get(chat_id, {}):
+        all_staff.add(row)
+
+    for row in DATA.get("advance", {}).get(chat_id, {}):
+        all_staff.add(row)
+
+    for row in DATA.get("fine", {}).get(chat_id, {}):
+        all_staff.add(row)
 
     lines = [f"📊 TỔNG KẾT LƯƠNG TF {now_dt.strftime('%m/%Y')}", ""]
     total_all = 0
