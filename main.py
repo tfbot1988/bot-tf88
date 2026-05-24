@@ -1581,36 +1581,32 @@ async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))
 async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
+    now_dt = datetime.now(TZ)
 
     salary_data = DATA.get("salary", {}).get(chat_id, {})
 
-    
-    lines = [f"📊 TỔNG KẾT LƯƠNG TF {datetime.now(TZ).strftime('%m/%Y')}", ""]
-
-    total_all = 0
-
     all_staff = set()
-
     all_staff.update(salary_data.keys())
     all_staff.update(DATA.get("bonus", {}).get(chat_id, {}).keys())
     all_staff.update(DATA.get("advance", {}).get(chat_id, {}).keys())
     all_staff.update(DATA.get("fine", {}).get(chat_id, {}).keys())
 
-    for staff_name in all_staff:
+    lines = [f"📊 TỔNG KẾT LƯƠNG TF {now_dt.strftime('%m/%Y')}", ""]
+    total_all = 0
 
+    for staff_name in all_staff:
         info = salary_data.get(staff_name, {})
+
         bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
         advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
         fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
 
         if info.get("type") == "fixed":
             salary = info.get("fixed_salary", 0)
-
         else:
             salary = 0
 
         final_salary = salary + bonus - advance - fine
-
         total_all += final_salary
 
         lines.extend([
@@ -1624,11 +1620,9 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         ])
 
     lines.append("-------------------")
-    lines.append(
-        f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", ".")
-    )
+    lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines))    
+    await update.message.reply_text("\n".join(lines))
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     today = datetime.now(TZ)
