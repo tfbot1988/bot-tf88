@@ -1579,6 +1579,51 @@ async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("")
 
     await update.message.reply_text("\n".join(lines))
+async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    salary_data = DATA.get("salary", {}).get(chat_id, {})
+
+    if not salary_data:
+        await update.message.reply_text("Chưa có dữ liệu lương.")
+        return
+
+    lines = [f"📊 TỔNG KẾT LƯƠNG TF {datetime.now(TZ).strftime('%m/%Y')}", ""]
+
+    total_all = 0
+
+    for staff_name, info in salary_data.items():
+
+        bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
+        advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
+        fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
+
+        if info.get("type") == "fixed":
+            salary = info.get("fixed_salary", 0)
+
+        else:
+            salary = 0
+
+        final_salary = salary + bonus - advance - fine
+
+        total_all += final_salary
+
+        lines.extend([
+            f"👤 {staff_name}",
+            f"- Lương: {salary:,}đ".replace(",", "."),
+            f"- Thưởng: {bonus:,}đ".replace(",", "."),
+            f"- Ứng: {advance:,}đ".replace(",", "."),
+            f"- Phạt: {fine:,}đ".replace(",", "."),
+            f"💰 Thực nhận: {final_salary:,}đ".replace(",", "."),
+            ""
+        ])
+
+    lines.append("-------------------")
+    lines.append(
+        f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", ".")
+    )
+
+    await update.message.reply_text("\n".join(lines))    
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     today = datetime.now(TZ)
@@ -2250,6 +2295,7 @@ def main() -> None:
     app.add_handler(CommandHandler("fine", fine_cmd))
     app.add_handler(CommandHandler("resetpayroll", resetpayroll_cmd))
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
+    app.add_handler(CommandHandler("payrollsummary", payrollsummary_cmd))
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
     app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
