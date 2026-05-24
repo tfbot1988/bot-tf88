@@ -1586,6 +1586,17 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     salary_data = DATA.get("salary", {}).get(chat_id, {})
 
     all_staff = set()
+    try:
+        spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
+        sheet = spreadsheet.worksheet("01_Cham_Cong")
+        records = sheet.get_all_records()
+
+        for row in records:
+            staff = str(row.get("Nhân viên", "")).strip()
+            if staff:
+                all_staff.add(staff)
+    except Exception:
+        pass
 
     for row in DATA.get("salary", {}).get(chat_id, {}):
         all_staff.add(row)
