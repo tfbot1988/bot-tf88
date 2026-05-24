@@ -1596,12 +1596,13 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     for staff_name in all_staff:
         info = salary_data.get(staff_name, {})
+        salary_type = info.get("type", "hourly")
 
         bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
         advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
         fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
 
-        if info.get("type") == "fixed":
+        if salary_type == "fixed":
             salary = info.get("fixed_salary", 0)
         else:
             total_minutes = 0
@@ -1637,8 +1638,8 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             except Exception:
                 pass
-
             salary = round((total_minutes / 60) * 30000)
+            
 
         final_salary = salary + bonus - advance - fine
         total_all += final_salary
