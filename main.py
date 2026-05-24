@@ -1584,16 +1584,21 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     salary_data = DATA.get("salary", {}).get(chat_id, {})
 
-    if not salary_data:
-        await update.message.reply_text("Chưa có dữ liệu lương.")
-        return
-
+    
     lines = [f"📊 TỔNG KẾT LƯƠNG TF {datetime.now(TZ).strftime('%m/%Y')}", ""]
 
     total_all = 0
 
-    for staff_name, info in salary_data.items():
+    all_staff = set()
 
+    all_staff.update(salary_data.keys())
+    all_staff.update(DATA.get("bonus", {}).get(chat_id, {}).keys())
+    all_staff.update(DATA.get("advance", {}).get(chat_id, {}).keys())
+    all_staff.update(DATA.get("fine", {}).get(chat_id, {}).keys())
+
+    for staff_name in all_staff:
+
+        info = salary_data.get(staff_name, {})
         bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
         advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
         fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
