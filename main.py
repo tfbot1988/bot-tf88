@@ -1604,7 +1604,41 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if info.get("type") == "fixed":
             salary = info.get("fixed_salary", 0)
         else:
-            salary = 0
+            total_minutes = 0
+
+            try:
+                spreadsheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8")
+                sheet = spreadsheet.worksheet("01_Cham_Cong")
+                records = sheet.get_all_records()
+
+                for row in records:
+                    date_text = str(row.get("Ngày", "")).strip()
+                    name_text = str(row.get("Nhân viên", "")).strip()
+                    duration_text = str(row.get("Thời lượng", "")).strip()
+
+                    if name_text != staff_name:
+                        continue
+
+                    if not date_text.endswith(now_dt.strftime("%Y")) or date_text[3:5] != now_dt.strftime("%m"):
+                        continue
+
+                    hours = 0
+                    mins = 0
+
+                    if "giờ" in duration_text:
+                        parts = duration_text.split("giờ")
+                        hours = int(parts[0].strip())
+                        if len(parts) > 1 and "phút" in parts[1]:
+                            mins = int(parts[1].replace("phút", "").strip())
+                    elif "phút" in duration_text:
+                        mins = int(duration_text.replace("phút", "").strip())
+
+                    total_minutes += hours * 60 + mins
+
+            except Exception:
+                pass
+
+            salary = round((total_minutes / 60) * 30000)
 
         final_salary = salary + bonus - advance - fine
         total_all += final_salary
