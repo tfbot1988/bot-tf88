@@ -1063,13 +1063,16 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         checkin = row.get("Checkin", "")
         checkout = row.get("Checkout", "")
         duration_text = row.get("Thời lượng", "")
-
         if not staff_name:
             continue
-
         if not checkin or not checkout:
             issues.append(f"- {staff_name}: thiếu CHECKIN/CHECKOUT")
             continue
+        if not duration_text:
+            issues.append(f"- {staff_name}: chưa có thời lượng")
+            continue
+
+
 
         try:
             minutes = 0
