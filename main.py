@@ -1681,6 +1681,8 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
+async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await payrollsummary_cmd(update, context)
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     today = datetime.now(TZ)
@@ -2353,6 +2355,7 @@ def main() -> None:
     app.add_handler(CommandHandler("resetpayroll", resetpayroll_cmd))
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
     app.add_handler(CommandHandler("payrollsummary", payrollsummary_cmd))
+    app.add_handler(CommandHandler("payrollexport", payrollexport_cmd))
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
     app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
