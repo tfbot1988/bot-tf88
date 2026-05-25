@@ -1660,10 +1660,10 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
             salary = round((total_minutes / 60) * 30000)
             
 
-        if salary == 0 and bonus == 0 and advance == 0 and fine == 0:
-            continue
         final_salary = salary + bonus - advance - fine
 
+        if final_salary == 0:
+            continue
         
         total_all += final_salary
 
