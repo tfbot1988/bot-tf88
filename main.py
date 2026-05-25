@@ -1683,6 +1683,8 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text("\n".join(lines))
 async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await payrollsummary_cmd(update, context)
+async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await payrollsummary_cmd(update, context)
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     today = datetime.now(TZ)
@@ -1709,8 +1711,7 @@ def schedule_monthly_item(app, chat_id: str, index: int, item: dict):
     ).timetz()
 
     app.job_queue.run_daily(
-async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await payrollsummary_cmd(update, context)
+
         monthly_reminder_job,
         time=remind_time,
         data={
