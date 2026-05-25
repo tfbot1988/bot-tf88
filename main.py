@@ -1709,6 +1709,8 @@ def schedule_monthly_item(app, chat_id: str, index: int, item: dict):
     ).timetz()
 
     app.job_queue.run_daily(
+async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await payrollsummary_cmd(update, context)
         monthly_reminder_job,
         time=remind_time,
         data={
@@ -2356,6 +2358,7 @@ def main() -> None:
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
     app.add_handler(CommandHandler("payrollsummary", payrollsummary_cmd))
     app.add_handler(CommandHandler("payrollexport", payrollexport_cmd))
+    app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
     app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
