@@ -1076,19 +1076,24 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             minutes = 0
+            duration_text = str(duration_text).lower().strip()
 
-            if "phút" in duration_text:
-                minutes = int(duration_text.replace("phút", "").strip())
-
-            elif "giờ" in duration_text:
+            if "giờ" in duration_text:
                 parts = duration_text.split("giờ")
                 hours = int(parts[0].strip())
 
                 mins = 0
                 if len(parts) > 1 and "phút" in parts[1]:
-                    mins = int(parts[1].replace("phút", "").strip())
+                    mins_text = parts[1].replace("phút", "").strip()
+                    mins = int(mins_text) if mins_text else 0
 
                 minutes = hours * 60 + mins
+
+            elif "phút" in duration_text:
+                minutes = int(duration_text.replace("phút", "").strip())
+
+            else:
+                raise Exception("invalid duration")
 
             if minutes <= 0:
                 continue
@@ -1684,8 +1689,6 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
-async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await payrollsummary_cmd(update, context)
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     today = datetime.now(TZ)
