@@ -68,7 +68,7 @@ def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 DATA = load_data()
-PAYROLL_ADMINS = ["Mr.Win", "Win", "Sếp TF"]
+PAYROLL_ADMINS = ["Mr.Win", "Win", "Win_TF", "Sếp TF", "Silent"]
 PAYROLL_LOCK = {}
 DATA.setdefault("fifo_stock", {})
 def is_payroll_admin(user_name: str) -> bool:
