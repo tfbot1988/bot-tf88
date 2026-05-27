@@ -68,8 +68,11 @@ def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 DATA = load_data()
+PAYROLL_ADMINS = ["Mr.Win", "Win", "Sếp TF"]
 PAYROLL_LOCK = {}
 DATA.setdefault("fifo_stock", {})
+def is_payroll_admin(user_name: str) -> bool:
+    return user_name in PAYROLL_ADMINS
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
@@ -1764,6 +1767,37 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
+async def payrolllock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.effective_user.first_name
+
+    if not is_payroll_admin(user_name):
+        await update.message.reply_text("⛔ Bạn không có quyền khóa lương.")
+        return
+
+    now = datetime.now(TZ)
+    month_key = now.strftime("%m/%Y")
+
+    PAYROLL_LOCK[month_key] = True
+
+    await update.message.reply_text(
+        f"🔒 Đã khóa bảng lương tháng {month_key}.\n"
+        "Không thể chỉnh thưởng / phạt / ứng."
+    )
+async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.effective_user.first_name
+
+    if not is_payroll_admin(user_name):
+        await update.message.reply_text("⛔ Bạn không có quyền mở khóa lương.")
+        return
+
+    now = datetime.now(TZ)
+    month_key = now.strftime("%m/%Y")
+
+    PAYROLL_LOCK[month_key] = False
+
+    await update.message.reply_text(
+        f"🔓 Đã mở khóa bảng lương tháng {month_key}."
+    )    
 async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await payrollsummary_cmd(update, context)
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
@@ -2428,6 +2462,7 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
+    app.add_handler(CommandHandler("payrolllock", payrolllock_cmd))
     app.add_handler(CommandHandler("payrollunlock", payrollunlock_cmd))
     app.add_handler(CommandHandler("payslip", payslip_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
