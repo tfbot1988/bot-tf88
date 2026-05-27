@@ -1575,7 +1575,34 @@ async def fine_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"⚠️ Đã ghi phạt cho {staff_name}: "
         f"{amount:,}đ".replace(",", ".")
-    )  
+    ) 
+async def fineremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Cú pháp: /fineremove Tên_nhân_viên số_tiền")
+        return
+
+    staff_name = context.args[0].strip().title()
+
+    try:
+        amount = int(context.args[1])
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ.")
+        return
+
+    chat_id = str(update.effective_chat.id)
+
+    current_fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
+    new_fine = max(0, current_fine - amount)
+
+    DATA.setdefault("fine", {}).setdefault(chat_id, {})
+    DATA["fine"][chat_id][staff_name] = new_fine
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"➖ Đã huỷ phạt của {staff_name}: {amount:,}đ\n"
+        f"⚠️ Phạt còn lại: {new_fine:,}đ".replace(",", ".")
+    ) 
 async def resetpayroll_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -1587,7 +1614,28 @@ async def resetpayroll_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "🧹 Đã reset thưởng / ứng / phạt của nhóm này."
-    )       
+    ) 
+async def finelist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    fine_data = DATA.get("fine", {}).get(chat_id, {})
+
+    if not fine_data:
+        await update.message.reply_text("📭 Hiện chưa có dữ liệu phạt.")
+        return
+
+    lines = ["⚠️ DANH SÁCH PHẠT NHÂN VIÊN\n"]
+
+    total_fine = 0
+
+    for staff_name, amount in fine_data.items():
+        lines.append(f"👤 {staff_name}: {amount:,}đ".replace(",", "."))
+        total_fine += amount
+
+    lines.append("")
+    lines.append(f"💸 Tổng phạt: {total_fine:,}đ".replace(",", "."))
+
+    await update.message.reply_text("\n".join(lines))       
 async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     salary_data = DATA.get("salary", {}).get(chat_id, {})
@@ -2389,6 +2437,8 @@ def main() -> None:
     app.add_handler(CommandHandler("bonusremove", bonusremove_cmd))
     app.add_handler(CommandHandler("advance", advance_cmd))
     app.add_handler(CommandHandler("fine", fine_cmd))
+    app.add_handler(CommandHandler("fineremove", fineremove_cmd))
+    app.add_handler(CommandHandler("finelist", finelist_cmd))
     app.add_handler(CommandHandler("resetpayroll", resetpayroll_cmd))
     app.add_handler(CommandHandler("salarylist", salarylist_cmd))
     app.add_handler(CommandHandler("payrollsummary", payrollsummary_cmd))
