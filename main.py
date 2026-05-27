@@ -1495,6 +1495,33 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎉 Đã cộng thưởng cho {staff_name}: "
         f"{amount:,}đ".replace(",", ".")
     )
+async def bonusremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Cú pháp: /bonusremove Tên_nhân_viên số_tiền")
+        return
+
+    staff_name = context.args[0].strip().title()
+
+    try:
+        amount = int(context.args[1])
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ.")
+        return
+
+    chat_id = str(update.effective_chat.id)
+
+    current_bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
+    new_bonus = max(0, current_bonus - amount)
+
+    DATA.setdefault("bonus", {}).setdefault(chat_id, {})
+    DATA["bonus"][chat_id][staff_name] = new_bonus
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"➖ Đã huỷ thưởng của {staff_name}: {amount:,}đ\n"
+        f"🎉 Thưởng còn lại: {new_bonus:,}đ".replace(",", ".")
+    )   
 async def advance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 2:
         await update.message.reply_text("⚠️ Cú pháp: /advance Tên_nhân_viên số_tiền")
@@ -2359,6 +2386,7 @@ def main() -> None:
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
     app.add_handler(CommandHandler("bonus", bonus_cmd))
+    app.add_handler(CommandHandler("bonusremove", bonusremove_cmd))
     app.add_handler(CommandHandler("advance", advance_cmd))
     app.add_handler(CommandHandler("fine", fine_cmd))
     app.add_handler(CommandHandler("resetpayroll", resetpayroll_cmd))
