@@ -1293,6 +1293,20 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✅ Đã chốt bảng lương tháng."
     )
+async def payrolllock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    now_dt = datetime.now(TZ)
+    lock_key = now_dt.strftime("%Y-%m")
+
+    DATA.setdefault("payroll_lock", {}).setdefault(chat_id, {})
+    DATA["payroll_lock"][chat_id][lock_key] = True
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        "🔒 Payroll tháng này đã được khóa."
+    )
 async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -1379,20 +1393,31 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hours = total_minutes // 60
     mins = total_minutes % 60
     hourly_rate = DATA.get("salary", {}).get(chat_id, {}).get(staff_name, {}).get("hourly_rate", 30000)
+    salary_type = DATA.get("salary", {}).get(chat_id, {}).get(staff_name, {}).get("type", "hourly")
 
-    salary = round((total_minutes / 60) * hourly_rate)
+    fixed_salary = DATA.get("salary", {}).get(chat_id, {}).get(staff_name, {}).get("fixed_salary", 0)
+
+    if salary_type == "fixed":
+        salary = fixed_salary
+    else:
+        salary = round((total_minutes / 60) * hourly_rate)
     bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
     advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
     fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
 
     final_salary = salary + bonus - advance - fine
-
+    if salary_type == "fixed":
+        type_text = "Lương cứng"
+        rate_text = f"{fixed_salary:,}đ/tháng"
+    else:
+        type_text = "Theo giờ"
+        rate_text = f"{hourly_rate:,}đ/h"
     await update.message.reply_text(
         f"🧾 PHIẾU LƯƠNG {now_dt.strftime('%m/%Y')}\n\n"
         f"👤 Nhân viên: {staff_name}\n"
-        f"- Loại lương: Theo giờ\n"
+        f"– Loại lương: {type_text}\n"
         f"- Tổng giờ: {hours} giờ {mins} phút\n"
-        f"– Đơn giá: {hourly_rate:,}đ/h\n"
+        f"– Đơn giá: {rate_text}\n"
         f"- Lương tạm: {salary:,}đ\n"
         f"- Thưởng: {bonus:,}đ\n"
         f"- Ứng lương: {advance:,}đ\n"
