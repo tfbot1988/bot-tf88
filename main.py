@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from datetime import datetime, time, timedelta
 from turtle import update
+from unittest import result
 from zoneinfo import ZoneInfo
 from gspread import spreadsheet
 from lunardate import LunarDate
@@ -68,11 +69,9 @@ def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 DATA = load_data()
-PAYROLL_ADMINS = ["Mr.Win", "Win", "Win_TF", "Sếp TF", "Silent"]
 PAYROLL_LOCK = {}
+DATA.setdefault("salary", {})
 DATA.setdefault("fifo_stock", {})
-def is_payroll_admin(user_name: str) -> bool:
-    return user_name in PAYROLL_ADMINS
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
@@ -86,7 +85,7 @@ def normalize_days(days: str) -> List[int]:
     for d in days.split(","):
         d = d.strip().lower()
         if d not in DAY_MAP:
-            raise ValueError(f"Ngày không hợp lệ: {d}. Dùng mon,tue,wed,thu,fri,sat,sun hoặc daily/weekdays/weekends.")
+            continue
         result.append(DAY_MAP[d])
     return sorted(set(result))
 
@@ -1436,7 +1435,46 @@ async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{type_text}"
     )
 
+async def sethourly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
 
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Cách dùng:\n"
+            "/sethourly Tên số_tiền\n\n"
+            "Ví dụ:\n"
+            "/sethourly Huy 30000\n"
+            "/sethourly Thao 25000"
+        )
+        return
+
+    staff_name = context.args[0].strip()
+
+    amount_text = (
+        context.args[1]
+        .replace(".", "")
+        .replace(",", "")
+        .replace("đ", "")
+        .strip()
+    )
+
+    try:
+        hourly_rate = int(amount_text)
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ.")
+        return
+
+    DATA.setdefault("salary", {}).setdefault(chat_id, {})
+    DATA["salary"][chat_id].setdefault(staff_name, {})
+
+    DATA["salary"][chat_id][staff_name]["hourly_rate"] = hourly_rate
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã cập nhật lương giờ cho {staff_name}:\n"
+        f"{hourly_rate:,}đ/giờ".replace(",", ".")
+    )
 async def fixedsalary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -1767,37 +1805,6 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
-async def payrolllock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.effective_user.first_name
-
-    if not is_payroll_admin(user_name):
-        await update.message.reply_text("⛔ Bạn không có quyền khóa lương.")
-        return
-
-    now = datetime.now(TZ)
-    month_key = now.strftime("%m/%Y")
-
-    PAYROLL_LOCK[month_key] = True
-
-    await update.message.reply_text(
-        f"🔒 Đã khóa bảng lương tháng {month_key}.\n"
-        "Không thể chỉnh thưởng / phạt / ứng."
-    )
-async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_name = update.effective_user.first_name
-
-    if not is_payroll_admin(user_name):
-        await update.message.reply_text("⛔ Bạn không có quyền mở khóa lương.")
-        return
-
-    now = datetime.now(TZ)
-    month_key = now.strftime("%m/%Y")
-
-    PAYROLL_LOCK[month_key] = False
-
-    await update.message.reply_text(
-        f"🔓 Đã mở khóa bảng lương tháng {month_key}."
-    )    
 async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await payrollsummary_cmd(update, context)
 async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
@@ -2462,11 +2469,11 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
     app.add_handler(CommandHandler("payrollfinal", payrollfinal_cmd))
-    app.add_handler(CommandHandler("payrolllock", payrolllock_cmd))
     app.add_handler(CommandHandler("payrollunlock", payrollunlock_cmd))
     app.add_handler(CommandHandler("payslip", payslip_cmd))
     app.add_handler(CommandHandler("clearattendance", clearattendance_cmd))
     app.add_handler(CommandHandler("salarytype", salarytype_cmd))
+    app.add_handler(CommandHandler("sethourly", sethourly_cmd))
     app.add_handler(CommandHandler("fixedsalary", fixedsalary_cmd))
     app.add_handler(CommandHandler("bonus", bonus_cmd))
     app.add_handler(CommandHandler("bonusremove", bonusremove_cmd))
