@@ -1300,13 +1300,20 @@ async def payrolllock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now_dt = datetime.now(TZ)
     lock_key = now_dt.strftime("%Y-%m")
 
-    DATA.setdefault("payroll_lock", {}).setdefault(chat_id, {})
-    DATA["payroll_lock"][chat_id][lock_key] = True
+    DATA.setdefault("payroll_lock", {})
+    DATA["payroll_lock"].setdefault(chat_id, {})
 
+    if DATA["payroll_lock"][chat_id].get(lock_key):
+        await update.message.reply_text(
+            f"⚠️ Payroll tháng {lock_key} đã được khóa trước đó."
+        )
+        return
+
+    DATA["payroll_lock"][chat_id][lock_key] = True
     save_data(DATA)
-    print(DATA["payroll_lock"])
+
     await update.message.reply_text(
-        "🔒 Payroll tháng này đã được khóa."
+        f"🔒 Đã khóa payroll tháng {lock_key}."
     )
 async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
