@@ -1287,6 +1287,7 @@ async def payrollfinal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     DATA["payroll_final_lock"][chat_id][final_key] = True
     save_data(DATA)
+    
 
     await payrollmonth_cmd(update, context)
 
@@ -1303,7 +1304,7 @@ async def payrolllock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     DATA["payroll_lock"][chat_id][lock_key] = True
 
     save_data(DATA)
-
+    print(DATA["payroll_lock"])
     await update.message.reply_text(
         "🔒 Payroll tháng này đã được khóa."
     )
@@ -1311,20 +1312,16 @@ async def payrollunlock_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
     now_dt = datetime.now(TZ)
-    final_key = now_dt.strftime("%Y-%m")
+    lock_key = now_dt.strftime("%Y-%m")
 
-    if "payroll_final_lock" not in DATA:
-        DATA["payroll_final_lock"] = {}
+    DATA.setdefault("payroll_lock", {}).setdefault(chat_id, {})
 
-    if chat_id not in DATA["payroll_final_lock"]:
-        DATA["payroll_final_lock"][chat_id] = {}
-
-    if DATA["payroll_final_lock"][chat_id].get(final_key):
-        del DATA["payroll_final_lock"][chat_id][final_key]
+    if DATA["payroll_lock"][chat_id].get(lock_key):
+        del DATA["payroll_lock"][chat_id][lock_key]
         save_data(DATA)
 
         await update.message.reply_text(
-            f"🔓 Đã mở khóa bảng lương tháng {final_key}"
+            f"🔓 Đã mở khóa payroll tháng {lock_key}."
         )
     else:
         await update.message.reply_text(
