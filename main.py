@@ -1378,7 +1378,9 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     hours = total_minutes // 60
     mins = total_minutes % 60
-    salary = round((total_minutes / 60) * 30000)
+    hourly_rate = DATA.get("salary", {}).get(chat_id, {}).get(staff_name, {}).get("hourly_rate", 30000)
+
+    salary = round((total_minutes / 60) * hourly_rate)
     bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
     advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
     fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
@@ -1390,7 +1392,7 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👤 Nhân viên: {staff_name}\n"
         f"- Loại lương: Theo giờ\n"
         f"- Tổng giờ: {hours} giờ {mins} phút\n"
-        f"- Đơn giá: 30.000đ/h\n"
+        f"– Đơn giá: {hourly_rate:,}đ/h\n"
         f"- Lương tạm: {salary:,}đ\n"
         f"- Thưởng: {bonus:,}đ\n"
         f"- Ứng lương: {advance:,}đ\n"
