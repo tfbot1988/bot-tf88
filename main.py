@@ -1371,6 +1371,7 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         date_text = str(row.get("Ngày", "")).strip()
         name_text = str(row.get("Nhân viên", "")).strip()
         duration_text = str(row.get("Thời lượng", "")).strip()
+        checkin_text = str(row.get("Checkin", "")).strip()
 
         if name_text != staff_name:
             continue
@@ -1400,7 +1401,9 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif weekday == 0:
                 paid_minutes = min(worked_minutes, 360)
             else:
-                if hours >= 17:
+                checkin_hour = int(checkin_text.split(":")[0]) if ":" in checkin_text else 0
+
+                if checkin_hour >= 17:
                     paid_minutes = min(worked_minutes, 240)
                 else:
                     paid_minutes = min(worked_minutes, 300)
