@@ -1390,23 +1390,23 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif "phút" in duration_text:
                 mins = int(duration_text.replace("phút", "").strip())
 
-        worked_minutes = hours * 60 + mins
+            worked_minutes = hours * 60 + mins
 
-        date_obj = datetime.strptime(date_text, "%d/%m/%Y")
-        weekday = date_obj.weekday()
+            date_obj = datetime.strptime(date_text, "%d/%m/%Y")
+            weekday = date_obj.weekday()
 
-        if weekday == 6:
-            paid_minutes = 0
-        elif weekday == 0:
-            paid_minutes = min(worked_minutes, 360)
-        else:
-            if hours >= 17:
-                paid_minutes = min(worked_minutes, 240)
+            if weekday == 6:
+                paid_minutes = 0
+            elif weekday == 0:
+                paid_minutes = min(worked_minutes, 360)
             else:
-                paid_minutes = min(worked_minutes, 300)
+                if hours >= 17:
+                    paid_minutes = min(worked_minutes, 240)
+                else:
+                    paid_minutes = min(worked_minutes, 300)
 
-        total_minutes += paid_minutes
-        except Exception:
+            total_minutes += paid_minutes
+        except Exception as e:
             pass
 
     hours = total_minutes // 60
