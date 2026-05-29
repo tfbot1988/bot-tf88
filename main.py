@@ -1390,7 +1390,10 @@ async def payslip_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif "phút" in duration_text:
                 mins = int(duration_text.replace("phút", "").strip())
 
-            total_minutes += hours * 60 + mins
+            worked_minutes = hours * 60 + mins
+            paid_minutes = min(worked_minutes, 300)
+
+            total_minutes += paid_minutes
         except Exception:
             pass
 
