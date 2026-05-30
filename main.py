@@ -972,7 +972,40 @@ async def revenuelist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append("")
     lines.append(f"🏦 Tổng doanh thu: {total:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines))    
+    await update.message.reply_text("\n".join(lines)) 
+async def revenueweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    revenue_data = DATA.get("revenue", {}).get(chat_id, {})
+
+    if not revenue_data:
+        await update.message.reply_text("❌ Chưa có dữ liệu doanh thu")
+        return
+
+    today = datetime.now(TZ).date()
+    start_week = today - timedelta(days=today.weekday())
+    end_week = start_week + timedelta(days=6)
+
+    lines = ["📊 DOANH THU TUẦN TF", ""]
+    total = 0
+
+    for day_text, amount in sorted(revenue_data.items()):
+        try:
+            day_obj = datetime.strptime(day_text, "%d/%m/%Y").date()
+        except:
+            continue
+
+        if start_week <= day_obj <= end_week:
+            total += amount
+            lines.append(f"{day_text}: {amount:,}đ".replace(",", "."))
+
+    if total == 0:
+        await update.message.reply_text("❌ Tuần này chưa có doanh thu")
+        return
+
+    lines.append("")
+    lines.append(f"🏦 Tổng doanh thu tuần: {total:,}đ".replace(",", "."))
+
+    await update.message.reply_text("\n".join(lines))      
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2609,6 +2642,7 @@ def main() -> None:
     app.add_handler(CommandHandler("stafflist", stafflist_cmd))
     app.add_handler(CommandHandler("revenue", revenue_cmd))
     app.add_handler(CommandHandler("revenuelist", revenuelist_cmd))
+    app.add_handler(CommandHandler("revenueweek", revenueweek_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
