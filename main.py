@@ -1163,7 +1163,29 @@ async def expenselist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append("------------------")
     lines.append(f"🏦 Tổng chi phí: {total:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines))                    
+    await update.message.reply_text("\n".join(lines))
+async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    revenue_today = DATA.get("revenue", {}).get(chat_id, {}).get(today, 0)
+
+    expense_items = DATA.get("expense", {}).get(chat_id, {}).get(today, [])
+    expense_total = sum(item.get("amount", 0) for item in expense_items)
+
+    profit = revenue_today - expense_total
+
+    lines = [
+        f"📊 P/L TF {today}",
+        "",
+        f"💰 Doanh thu: {revenue_today:,}đ".replace(",", "."),
+        f"💸 Chi phí: {expense_total:,}đ".replace(",", "."),
+        "------------------",
+        f"🏆 Lợi nhuận: {profit:,}đ".replace(",", "."),
+    ]
+
+    await update.message.reply_text("\n".join(lines))                       
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2805,6 +2827,7 @@ def main() -> None:
     app.add_handler(CommandHandler("revenuedashboard", revenuedashboard_cmd))
     app.add_handler(CommandHandler("expense", expense_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
+    app.add_handler(CommandHandler("pl", pl_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
