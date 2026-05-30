@@ -72,6 +72,7 @@ DATA = load_data()
 PAYROLL_LOCK = {}
 DATA.setdefault("salary", {})
 DATA.setdefault("fifo_stock", {})
+DATA.setdefault("revenue", {})
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
@@ -922,6 +923,36 @@ async def staffremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.message.reply_text(f"✅ Đã xóa nhân viên: {staff_name}")
 
 
+async def revenue_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Cách dùng:\n/revenue 3000000"
+        )
+        return
+
+    try:
+        amount = int(
+            context.args[0]
+            .replace(".", "")
+            .replace(",", "")
+        )
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ")
+        return
+
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    DATA.setdefault("revenue", {}).setdefault(chat_id, {})
+    DATA["revenue"][chat_id][today] = amount
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"💰 Đã ghi nhận doanh thu {today}\n"
+        f"{amount:,}đ".replace(",", ".")
+    )
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2556,6 +2587,7 @@ def main() -> None:
     app.add_handler(CommandHandler("staffadd", staffadd_cmd))
     app.add_handler(CommandHandler("staffremove", staffremove_cmd))
     app.add_handler(CommandHandler("stafflist", stafflist_cmd))
+    app.add_handler(CommandHandler("revenue", revenue_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
