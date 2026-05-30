@@ -1185,7 +1185,56 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🏆 Lợi nhuận: {profit:,}đ".replace(",", "."),
     ]
 
-    await update.message.reply_text("\n".join(lines))                       
+    await update.message.reply_text("\n".join(lines))
+async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    revenue_data = DATA.get("revenue", {}).get(chat_id, {})
+    expense_data = DATA.get("expense", {}).get(chat_id, {})
+
+    current_month = datetime.now(TZ).strftime("%m")
+    current_year = datetime.now(TZ).strftime("%Y")
+
+    revenue_total = 0
+    expense_total = 0
+
+    for day_text, amount in revenue_data.items():
+        try:
+            day_obj = datetime.strptime(day_text, "%d/%m/%Y")
+        except:
+            continue
+
+        if (
+            day_obj.strftime("%m") == current_month
+            and day_obj.strftime("%Y") == current_year
+        ):
+            revenue_total += amount
+
+    for day_text, items in expense_data.items():
+        try:
+            day_obj = datetime.strptime(day_text, "%d/%m/%Y")
+        except:
+            continue
+
+        if (
+            day_obj.strftime("%m") == current_month
+            and day_obj.strftime("%Y") == current_year
+        ):
+            for item in items:
+                expense_total += item.get("amount", 0)
+
+    profit = revenue_total - expense_total
+
+    lines = [
+        f"📊 P/L THÁNG {current_month}/{current_year}",
+        "",
+        f"💰 Doanh thu: {revenue_total:,}đ".replace(",", "."),
+        f"💸 Chi phí: {expense_total:,}đ".replace(",", "."),
+        "------------------",
+        f"🏆 Lợi nhuận: {profit:,}đ".replace(",", "."),
+    ]
+
+    await update.message.reply_text("\n".join(lines))                           
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2828,6 +2877,7 @@ def main() -> None:
     app.add_handler(CommandHandler("expense", expense_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("pl", pl_cmd))
+    app.add_handler(CommandHandler("plmonth", plmonth_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
