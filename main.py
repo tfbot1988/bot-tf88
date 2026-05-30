@@ -1137,7 +1137,33 @@ async def expense_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"💸 Đã ghi chi phí {today}\n"
         f"- {note}: {amount:,}đ".replace(",", ".")
-    )                 
+    )
+async def expenselist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    expense_data = DATA.get("expense", {}).get(chat_id, {})
+
+    if not expense_data:
+        await update.message.reply_text("❌ Chưa có dữ liệu chi phí")
+        return
+
+    lines = ["💸 CHI PHÍ TF", ""]
+    total = 0
+
+    for day_text, items in sorted(expense_data.items()):
+        lines.append(f"📅 {day_text}")
+
+        for item in items:
+            amount = item.get("amount", 0)
+            note = item.get("note", "")
+            total += amount
+            lines.append(f"- {note}: {amount:,}đ".replace(",", "."))
+
+        lines.append("")
+
+    lines.append("------------------")
+    lines.append(f"🏦 Tổng chi phí: {total:,}đ".replace(",", "."))
+
+    await update.message.reply_text("\n".join(lines))                    
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2778,6 +2804,7 @@ def main() -> None:
     app.add_handler(CommandHandler("revenuemonth", revenuemonth_cmd))
     app.add_handler(CommandHandler("revenuedashboard", revenuedashboard_cmd))
     app.add_handler(CommandHandler("expense", expense_cmd))
+    app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
