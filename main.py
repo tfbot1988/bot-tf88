@@ -1045,7 +1045,62 @@ async def revenuemonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append(f"📅 Số ngày có doanh thu: {count_days}")
     lines.append(f"📊 Trung bình/ngày: {average:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines))          
+    await update.message.reply_text("\n".join(lines))
+async def revenuedashboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    revenue_data = DATA.get("revenue", {}).get(chat_id, {})
+
+    if not revenue_data:
+        await update.message.reply_text("❌ Chưa có dữ liệu doanh thu")
+        return
+
+    today = datetime.now(TZ).date()
+    start_week = today - timedelta(days=today.weekday())
+
+    today_text = today.strftime("%d/%m/%Y")
+    current_month = today.strftime("%m")
+    current_year = today.strftime("%Y")
+
+    today_total = 0
+    week_total = 0
+    month_total = 0
+    month_days = 0
+
+    best_day = ""
+    best_amount = 0
+
+    for day_text, amount in revenue_data.items():
+        try:
+            day_obj = datetime.strptime(day_text, "%d/%m/%Y").date()
+        except:
+            continue
+
+        if day_text == today_text:
+            today_total += amount
+
+        if start_week <= day_obj <= today:
+            week_total += amount
+
+        if day_obj.strftime("%m") == current_month and day_obj.strftime("%Y") == current_year:
+            month_total += amount
+            month_days += 1
+
+        if amount > best_amount:
+            best_amount = amount
+            best_day = day_text
+
+    average = round(month_total / month_days) if month_days else 0
+
+    await update.message.reply_text(
+        "📊 DASHBOARD DOANH THU TF\n\n"
+        f"💰 Hôm nay: {today_total:,}đ\n"
+        f"📅 Tuần này: {week_total:,}đ\n"
+        f"📈 Tháng này: {month_total:,}đ\n"
+        f"📊 Trung bình/ngày: {average:,}đ\n\n"
+        f"🔥 Ngày cao nhất: {best_day}\n"
+        f"{best_amount:,}đ"
+        .replace(",", ".")
+    )              
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2684,6 +2739,7 @@ def main() -> None:
     app.add_handler(CommandHandler("revenuelist", revenuelist_cmd))
     app.add_handler(CommandHandler("revenueweek", revenueweek_cmd))
     app.add_handler(CommandHandler("revenuemonth", revenuemonth_cmd))
+    app.add_handler(CommandHandler("revenuedashboard", revenuedashboard_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
