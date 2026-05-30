@@ -905,11 +905,14 @@ async def staffremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     staff_list = DATA.get("staff", {}).get(chat_id, [])
 
-    if staff_name not in staff_list:
+    salary_exists = staff_name in DATA.get("salary", {}).get(chat_id, {})
+
+    if staff_name not in staff_list and not salary_exists:
         await update.message.reply_text(f"⚠️ Không tìm thấy nhân viên: {staff_name}")
         return
 
-    staff_list.remove(staff_name)
+    if staff_name in staff_list:
+        staff_list.remove(staff_name)
     DATA.get("salary", {}).get(chat_id, {}).pop(staff_name, None)
     DATA.get("bonus", {}).get(chat_id, {}).pop(staff_name, None)
     DATA.get("advance", {}).get(chat_id, {}).pop(staff_name, None)
