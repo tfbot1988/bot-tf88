@@ -910,6 +910,10 @@ async def staffremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     staff_list.remove(staff_name)
+    DATA.get("salary", {}).get(chat_id, {}).pop(staff_name, None)
+    DATA.get("bonus", {}).get(chat_id, {}).pop(staff_name, None)
+    DATA.get("advance", {}).get(chat_id, {}).pop(staff_name, None)
+    DATA.get("fine", {}).get(chat_id, {}).pop(staff_name, None)
     save_data(DATA)
 
     await update.message.reply_text(f"✅ Đã xóa nhân viên: {staff_name}")
