@@ -73,6 +73,7 @@ PAYROLL_LOCK = {}
 DATA.setdefault("salary", {})
 DATA.setdefault("fifo_stock", {})
 DATA.setdefault("revenue", {})
+DATA.setdefault("expense", {})
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
@@ -1100,7 +1101,43 @@ async def revenuedashboard_cmd(update: Update, context: ContextTypes.DEFAULT_TYP
         f"🔥 Ngày cao nhất: {best_day}\n"
         f"{best_amount:,}đ"
         .replace(",", ".")
-    )              
+    ) 
+async def expense_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ Cách dùng:\n/expense 250000 cà phê hạt"
+        )
+        return
+
+    try:
+        amount = int(
+            context.args[0]
+            .replace(".", "")
+            .replace(",", "")
+        )
+    except:
+        await update.message.reply_text("❌ Số tiền không hợp lệ")
+        return
+
+    note = " ".join(context.args[1:]).strip()
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    DATA.setdefault("expense", {}).setdefault(chat_id, {})
+    DATA["expense"][chat_id].setdefault(today, [])
+
+    DATA["expense"][chat_id][today].append({
+        "amount": amount,
+        "note": note
+    })
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"💸 Đã ghi chi phí {today}\n"
+        f"- {note}: {amount:,}đ".replace(",", ".")
+    )                 
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2740,6 +2777,7 @@ def main() -> None:
     app.add_handler(CommandHandler("revenueweek", revenueweek_cmd))
     app.add_handler(CommandHandler("revenuemonth", revenuemonth_cmd))
     app.add_handler(CommandHandler("revenuedashboard", revenuedashboard_cmd))
+    app.add_handler(CommandHandler("expense", expense_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
