@@ -1005,7 +1005,47 @@ async def revenueweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append("")
     lines.append(f"🏦 Tổng doanh thu tuần: {total:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines))      
+    await update.message.reply_text("\n".join(lines))
+async def revenuemonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    revenue_data = DATA.get("revenue", {}).get(chat_id, {})
+
+    if not revenue_data:
+        await update.message.reply_text("❌ Chưa có dữ liệu doanh thu")
+        return
+
+    now_dt = datetime.now(TZ)
+    current_month = now_dt.strftime("%m")
+    current_year = now_dt.strftime("%Y")
+
+    lines = [f"📈 DOANH THU THÁNG TF {current_month}/{current_year}", ""]
+    total = 0
+    count_days = 0
+
+    for day_text, amount in sorted(revenue_data.items()):
+        try:
+            day_obj = datetime.strptime(day_text, "%d/%m/%Y")
+        except:
+            continue
+
+        if day_obj.strftime("%m") == current_month and day_obj.strftime("%Y") == current_year:
+            total += amount
+            count_days += 1
+            lines.append(f"{day_text}: {amount:,}đ".replace(",", "."))
+
+    if total == 0:
+        await update.message.reply_text("❌ Tháng này chưa có doanh thu")
+        return
+
+    average = round(total / count_days) if count_days else 0
+
+    lines.append("")
+    lines.append("------------------")
+    lines.append(f"🏦 Tổng doanh thu tháng: {total:,}đ".replace(",", "."))
+    lines.append(f"📅 Số ngày có doanh thu: {count_days}")
+    lines.append(f"📊 Trung bình/ngày: {average:,}đ".replace(",", "."))
+
+    await update.message.reply_text("\n".join(lines))          
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     staff_list = DATA.get("staff", {}).get(chat_id, [])
@@ -2643,6 +2683,7 @@ def main() -> None:
     app.add_handler(CommandHandler("revenue", revenue_cmd))
     app.add_handler(CommandHandler("revenuelist", revenuelist_cmd))
     app.add_handler(CommandHandler("revenueweek", revenueweek_cmd))
+    app.add_handler(CommandHandler("revenuemonth", revenuemonth_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
