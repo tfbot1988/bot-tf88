@@ -74,6 +74,14 @@ DATA.setdefault("salary", {})
 DATA.setdefault("fifo_stock", {})
 DATA.setdefault("revenue", {})
 DATA.setdefault("expense", {})
+SHEET_ID = "1-2CUwuORi7L4HIUMx7n7uUVhMIFXL0_95PVp3_LGGe8"
+
+def get_worksheet(sheet_name):
+    if not gs_client:
+        return None
+
+    spreadsheet = gs_client.open_by_key(SHEET_ID)
+    return spreadsheet.worksheet(sheet_name)
 
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
@@ -949,6 +957,12 @@ async def revenue_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     DATA["revenue"][chat_id][today] = amount
 
     save_data(DATA)
+    try:
+        sheet = get_worksheet("04_Doanh_Thu")
+        if sheet:
+            sheet.append_row([today, amount])
+    except Exception as e:
+        print("Google Sheet revenue error:", e)
 
     await update.message.reply_text(
         f"💰 Đã ghi nhận doanh thu {today}\n"
@@ -1133,6 +1147,12 @@ async def expense_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
     save_data(DATA)
+    try:
+        sheet = get_worksheet("05_Chi_Phi")
+        if sheet:
+            sheet.append_row([today, note, amount])
+    except Exception as e:
+        print("Google Sheet expense error:", e)
 
     await update.message.reply_text(
         f"💸 Đã ghi chi phí {today}\n"
