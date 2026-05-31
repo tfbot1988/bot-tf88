@@ -1246,6 +1246,41 @@ async def expenselist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append(f"🏦 Tổng chi phí: {total:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
+async def resetfinance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+
+    if not context.args or " ".join(context.args).strip().upper() != "CONFIRM":
+        await update.message.reply_text(
+            "⚠️ Lệnh này sẽ xoá toàn bộ dữ liệu Doanh thu, Chi phí, P/L của nhóm này.\n\n"
+            "Để xác nhận, gõ:\n"
+            "/resetfinance CONFIRM"
+        )
+        return
+
+    DATA.setdefault("revenue", {})[chat_id] = {}
+    DATA.setdefault("expense", {})[chat_id] = {}
+    save_data(DATA)
+
+    try:
+        sheets = {
+            "04_Doanh_Thu": ["Ngày", "Doanh thu"],
+            "05_Chi_Phi": ["Ngày", "Loại chi phí", "Số tiền"],
+            "06_P_L": ["Ngày", "Doanh thu", "Chi phí", "Lợi nhuận"],
+        }
+
+        for sheet_name, header in sheets.items():
+            sheet = get_worksheet(sheet_name)
+            if sheet:
+                sheet.clear()
+                sheet.append_row(header)
+
+    except Exception as e:
+        print("Google Sheet reset finance error:", e)
+
+    await update.message.reply_text(
+        "✅ Đã xoá dữ liệu tài chính của nhóm này.\n"
+        "Đã reset Doanh thu, Chi phí, P/L và giữ lại tiêu đề Google Sheet."
+    )
 async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -2969,6 +3004,7 @@ def main() -> None:
     app.add_handler(CommandHandler("thu", incomelist_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("pl", pl_cmd))
+    app.add_handler(CommandHandler("resetfinance", resetfinance_cmd))
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
