@@ -78,14 +78,17 @@ SHEET_ID = "1-2CUwuORi7L4HIUMx7n7uUVhMIFXL0_95PVp3_LGGe8"
 
 def get_worksheet(sheet_name):
     if not gs_client:
+        print("NO GS CLIENT")
         return None
+
+    print("OPEN SHEET ID:", SHEET_ID)
+    print("REQUEST SHEET:", sheet_name)
 
     spreadsheet = gs_client.open_by_key(SHEET_ID)
 
     print("SHEET TITLES:", [ws.title for ws in spreadsheet.worksheets()])
 
     return spreadsheet.worksheet(sheet_name)
-    
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
     if days == "daily":
