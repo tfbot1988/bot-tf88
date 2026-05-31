@@ -997,7 +997,59 @@ async def revenuelist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append("")
     lines.append(f"🏦 Tổng doanh thu: {total:,}đ".replace(",", "."))
 
-    await update.message.reply_text("\n".join(lines)) 
+    await update.message.reply_text("\n".join(lines))
+async def income_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    chat_id = str(update.effective_chat.id)
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Cách dùng:\n/income TF 120"
+        )
+        return
+
+    source = context.args[0].upper()
+
+    try:
+        amount = float(context.args[1])
+    except:
+        await update.message.reply_text("Số tiền không hợp lệ")
+        return
+
+    DATA.setdefault("income", {}).setdefault(chat_id, {})
+
+    DATA["income"][chat_id][source] = amount
+
+    save_data(DATA)
+
+    await update.message.reply_text(
+        f"✅ Đã cập nhật\n{source}: {amount}tr"
+    )
+async def incomelist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    chat_id = str(update.effective_chat.id)
+
+    income_data = DATA.get("income", {}).get(chat_id, {})
+
+    if not income_data:
+        await update.message.reply_text(
+            "Chưa có nguồn thu nào."
+        )
+        return
+
+    total = 0
+    lines = ["📊 TỔNG THU NHẬP", ""]
+
+    for source, amount in sorted(income_data.items()):
+        total += amount
+        lines.append(f"{source}: {amount}tr")
+
+    lines.append("")
+    lines.append(f"💰 Tổng: {total}tr")
+
+    await update.message.reply_text(
+        "\n".join(lines)
+    )
 async def revenueweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     revenue_data = DATA.get("revenue", {}).get(chat_id, {})
@@ -2904,6 +2956,8 @@ def main() -> None:
     app.add_handler(CommandHandler("revenueweek", revenueweek_cmd))
     app.add_handler(CommandHandler("revenuemonth", revenuemonth_cmd))
     app.add_handler(CommandHandler("revenuedashboard", revenuedashboard_cmd))
+    app.add_handler(CommandHandler("income", income_cmd))
+    app.add_handler(CommandHandler("incomelist", incomelist_cmd))
     app.add_handler(CommandHandler("expense", expense_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("pl", pl_cmd))
