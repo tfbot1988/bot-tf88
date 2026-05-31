@@ -1307,7 +1307,18 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if sheet.row_values(1) != ["Ngày", "Doanh thu", "Chi phí", "Lợi nhuận"]:
                 sheet.insert_row(["Ngày", "Doanh thu", "Chi phí", "Lợi nhuận"], 1)
 
-            sheet.append_row([today, revenue_today, expense_total, profit])
+            records = sheet.get_all_values()
+            target_row = None
+
+            for i, row in enumerate(records[1:], start=2):
+                if row and row[0] == today:
+                    target_row = i
+                    break
+
+            if target_row:
+                sheet.update(f"A{target_row}:D{target_row}", [[today, revenue_today, expense_total, profit]])
+            else:
+                sheet.append_row([today, revenue_today, expense_total, profit])
     except Exception as e:
         print("Google Sheet P/L error:", e)
     await update.message.reply_text("\n".join(lines))
