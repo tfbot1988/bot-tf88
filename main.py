@@ -966,7 +966,11 @@ async def revenue_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         sheet = get_worksheet("04_Doanh_Thu")
         if sheet:
+            if sheet.row_values(1) != ["Ngày", "Doanh thu"]:
+                sheet.insert_row(["Ngày", "Doanh thu"], 1)
+
             sheet.append_row([today, amount])
+    
     except Exception as e:
         print("Google Sheet revenue error:", e)
 
