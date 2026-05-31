@@ -1266,7 +1266,15 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "------------------",
         f"🏆 Lợi nhuận: {profit:,}đ".replace(",", "."),
     ]
+    try:
+        sheet = get_worksheet("06_P_L")
+        if sheet:
+            if sheet.row_values(1) != ["Ngày", "Doanh thu", "Chi phí", "Lợi nhuận"]:
+                sheet.insert_row(["Ngày", "Doanh thu", "Chi phí", "Lợi nhuận"], 1)
 
+            sheet.append_row([today, revenue_today, expense_total, profit])
+    except Exception as e:
+        print("Google Sheet P/L error:", e)
     await update.message.reply_text("\n".join(lines))
 async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
