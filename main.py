@@ -2959,6 +2959,7 @@ def main() -> None:
     app.add_handler(CommandHandler("income", income_cmd))
     app.add_handler(CommandHandler("incomelist", incomelist_cmd))
     app.add_handler(CommandHandler("expense", expense_cmd))
+    app.add_handler(CommandHandler("thu", incomelist_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("pl", pl_cmd))
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
