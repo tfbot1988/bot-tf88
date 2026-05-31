@@ -84,7 +84,7 @@ def get_worksheet(sheet_name):
     print("OPEN SHEET URL:", SHEET_URL)
     print("REQUEST SHEET:", sheet_name)
 
-    spreadsheet = gs_client.open_by_url(SHEET_URL)
+    spreadsheet = gs_client.open("TF - Hệ Thống Vận Hành")
 
     print("SHEET TITLES:", [ws.title for ws in spreadsheet.worksheets()])
 
