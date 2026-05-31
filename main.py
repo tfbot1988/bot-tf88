@@ -74,17 +74,17 @@ DATA.setdefault("salary", {})
 DATA.setdefault("fifo_stock", {})
 DATA.setdefault("revenue", {})
 DATA.setdefault("expense", {})
-SHEET_ID = "1-2CUwuORi7L4HIUMx7n7uUVhMIFXL0_95PVp3_LGGe8"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1-2CUwuORi7L4HIUMx7n7uUVhMIFXL0_95PVp3_LGGe8/edit"
 
 def get_worksheet(sheet_name):
     if not gs_client:
         print("NO GS CLIENT")
         return None
 
-    print("OPEN SHEET ID:", SHEET_ID)
+    print("OPEN SHEET URL:", SHEET_URL)
     print("REQUEST SHEET:", sheet_name)
 
-    spreadsheet = gs_client.open_by_key(SHEET_ID)
+    spreadsheet = gs_client.open_by_url(SHEET_URL)
 
     print("SHEET TITLES:", [ws.title for ws in spreadsheet.worksheets()])
 
