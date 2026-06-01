@@ -3029,6 +3029,8 @@ def main() -> None:
     schedule_all(app)
     schedule_lunar_all(app)
     schedule_birthday_all(app)
+    schedule_monthly_all(app)
+
     log.info("Bot TF PRO starting in timezone %s", TZ_NAME)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
