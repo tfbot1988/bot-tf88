@@ -897,52 +897,62 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
 async def staffadd_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = str(update.effective_chat.id)
     staff_name = " ".join(context.args).strip().title()
 
     if not staff_name:
         await update.message.reply_text("❌ Cách dùng: /staffadd Tên nhân viên")
         return
 
-    DATA.setdefault("staff", {}).setdefault(chat_id, [])
+    sheet = get_worksheet("00_Nhan_Vien")
 
-    if staff_name in DATA["staff"][chat_id]:
-        await update.message.reply_text(f"⚠️ {staff_name} đã có trong danh sách nhân viên.")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 00_Nhan_Vien.")
         return
 
-    DATA["staff"][chat_id].append(staff_name)
-    save_data(DATA)
+    rows = sheet.get_all_records()
+
+    for row in rows:
+        old_name = str(row.get("Tên nhân viên", "")).strip().title()
+        status = str(row.get("Trạng thái", "")).strip().lower()
+
+        if old_name == staff_name and status == "active":
+            await update.message.reply_text(f"⚠️ {staff_name} đã có trong danh sách nhân viên.")
+            return
+
+    sheet.append_row([
+        staff_name,
+        "active",
+        datetime.now(TZ).strftime("%d/%m/%Y"),
+        ""
+    ])
 
     await update.message.reply_text(f"✅ Đã thêm nhân viên: {staff_name}")
-
-
+    
 async def staffremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = str(update.effective_chat.id)
-    staff_name = " ".join(context.args).strip()
+    staff_name = " ".join(context.args).strip().title()
 
     if not staff_name:
         await update.message.reply_text("❌ Cách dùng: /staffremove Tên nhân viên")
         return
 
-    staff_list = DATA.get("staff", {}).get(chat_id, [])
+    sheet = get_worksheet("00_Nhan_Vien")
 
-    salary_exists = staff_name in DATA.get("salary", {}).get(chat_id, {})
-
-    if staff_name not in staff_list and not salary_exists:
-        await update.message.reply_text(f"⚠️ Không tìm thấy nhân viên: {staff_name}")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 00_Nhan_Vien.")
         return
 
-    if staff_name in staff_list:
-        staff_list.remove(staff_name)
-    DATA.get("salary", {}).get(chat_id, {}).pop(staff_name, None)
-    DATA.get("bonus", {}).get(chat_id, {}).pop(staff_name, None)
-    DATA.get("advance", {}).get(chat_id, {}).pop(staff_name, None)
-    DATA.get("fine", {}).get(chat_id, {}).pop(staff_name, None)
-    save_data(DATA)
+    rows = sheet.get_all_records()
 
-    await update.message.reply_text(f"✅ Đã xóa nhân viên: {staff_name}")
+    for index, row in enumerate(rows, start=2):
+        old_name = str(row.get("Tên nhân viên", "")).strip().title()
 
+        if old_name == staff_name:
+            sheet.update_cell(index, 2, "inactive")
+            sheet.update_cell(index, 4, "Đã chuyển inactive")
+            await update.message.reply_text(f"✅ Đã chuyển {staff_name} sang inactive.")
+            return
 
+    await update.message.reply_text(f"⚠️ Không tìm thấy nhân viên: {staff_name}")
 async def revenue_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -1377,17 +1387,45 @@ async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n".join(lines))                           
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = str(update.effective_chat.id)
-    staff_list = DATA.get("staff", {}).get(chat_id, [])
+    sheet = get_worksheet("00_Nhan_Vien")
 
-    if not staff_list:
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 00_Nhan_Vien.")
+        return
+
+    rows = sheet.get_all_records()
+
+    active_staff = []
+    inactive_staff = []
+
+    for row in rows:
+        name = str(row.get("Tên nhân viên", "")).strip()
+        status = str(row.get("Trạng thái", "")).strip().lower()
+
+        if not name:
+            continue
+
+        if status == "active":
+            active_staff.append(name)
+        else:
+            inactive_staff.append(name)
+
+    if not active_staff and not inactive_staff:
         await update.message.reply_text("📋 Chưa có nhân viên nào trong danh sách.")
         return
 
     lines = ["📋 DANH SÁCH NHÂN VIÊN TF", ""]
 
-    for index, staff_name in enumerate(staff_list, start=1):
-        lines.append(f"{index}. {staff_name}")
+    if active_staff:
+        lines.append("✅ Đang làm:")
+        for index, name in enumerate(active_staff, start=1):
+            lines.append(f"{index}. {name}")
+
+    if inactive_staff:
+        lines.append("")
+        lines.append("⛔ Đã nghỉ / inactive:")
+        for index, name in enumerate(inactive_staff, start=1):
+            lines.append(f"{index}. {name}")
 
     await update.message.reply_text("\n".join(lines))
 async def checkshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
