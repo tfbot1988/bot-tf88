@@ -439,17 +439,19 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
         save_data(DATA)
         if gs_client:
-            sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
+            sheet = get_worksheet("01_Cham_Cong")
+            print("CHECKIN SHEET:", sheet.title if sheet else None)
 
-            sheet.append_row([
-                datetime.now(TZ).strftime("%d/%m/%Y"),
-                staff_name,
-                now,
-                "",
-                "",
-                "",
-                "Tên chưa duyệt" if unknown_staff else ""
-            ])
+            if sheet:
+                sheet.append_row([
+                    datetime.now(TZ).strftime("%d/%m/%Y"),
+                    staff_name,
+                    now,
+                    "",
+                    "",
+                    "",
+                    "Tên chưa duyệt" if unknown_staff else ""
+                ])
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
         )
@@ -490,43 +492,46 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
         save_data(DATA)
         if gs_client:
-            sheet = gs_client.open_by_key("1-2CUwuORi7L4HlUMx7n7uUVhMIFXL0_95PVp3_LGGe8").sheet1
+            sheet = get_worksheet("01_Cham_Cong")
+            print("CHECKOUT SHEET:", sheet.title if sheet else None)
 
-            records = sheet.get_all_records()
+            if sheet:
 
-            for i, row in enumerate(records, start=2):
-                if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
-                    sheet.update_cell(i, 4, now)
+                records = sheet.get_all_records()
 
-                    checkin_time = datetime.strptime(row["Checkin"], "%H:%M")
-                    checkout_time = datetime.strptime(now, "%H:%M")
-                    total_hours = round((checkout_time - checkin_time).seconds / 3600, 2)
+                for i, row in enumerate(records, start=2):
+                    if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
+                        sheet.update_cell(i, 4, now)
 
-                    sheet.format("E:E", {
-                        "numberFormat": {
-                            "type": "NUMBER",
-                            "pattern": "0.00"
-                        }
-                    })
+                        checkin_time = datetime.strptime(row["Checkin"], "%H:%M")
+                        checkout_time = datetime.strptime(now, "%H:%M")
+                        total_hours = round((checkout_time - checkin_time).seconds / 3600, 2)
 
-                    sheet.update(
-                        f"E{i}",
-                        [[float(total_hours)]],
-                        value_input_option="RAW"
-                    )
-                    total_minutes = int((checkout_time - checkin_time).seconds / 60)
-                    hours = total_minutes // 60
-                    minutes = total_minutes % 60
+                        sheet.format("E:E", {
+                            "numberFormat": {
+                                "type": "NUMBER",
+                                "pattern": "0.00"
+                            }
+                        })
 
-                    if hours > 0 and minutes > 0:
-                        duration_text = f"{hours} giờ {minutes} phút"
-                    elif hours > 0:
-                        duration_text = f"{hours} giờ"
-                    else:
-                        duration_text = f"{minutes} phút"
+                        sheet.update(
+                            f"E{i}",
+                            [[float(total_hours)]],
+                            value_input_option="RAW"
+                        )
+                        total_minutes = int((checkout_time - checkin_time).seconds / 60)
+                        hours = total_minutes // 60
+                        minutes = total_minutes % 60
 
-                    sheet.update_cell(i, 6, duration_text)
-                    break
+                        if hours > 0 and minutes > 0:
+                            duration_text = f"{hours} giờ {minutes} phút"
+                        elif hours > 0:
+                            duration_text = f"{hours} giờ"
+                        else:
+                            duration_text = f"{minutes} phút"
+
+                        sheet.update_cell(i, 6, duration_text)
+                        break
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}"
         )
