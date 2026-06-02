@@ -1663,13 +1663,17 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         break
 
                 if not already_exists:
-                    salary_sheet.append_row([
-                        payroll_date,
-                        staff_name,
-                        f"{hours} giờ {mins} phút",
-                        salary,
-                        "Tạm tính tuần"
-                    ])
+                    salary_sheet.append_row(
+                        [
+                            payroll_date,
+                            staff_name,
+                            f"{hours} giờ {mins} phút",
+                            salary,
+                            "Tạm tính tuần"
+                        ],
+                        value_input_option="RAW",
+                        insert_data_option="INSERT_ROWS"
+)
                     sheet_status = "Đã ghi vào 02_Tinh_Luong"
                 else:
                     sheet_status = "Đã có trong 02_Tinh_Luong, không ghi trùng"
