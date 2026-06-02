@@ -443,7 +443,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             print("CHECKIN SHEET:", sheet.title if sheet else None)
 
             if sheet:
-                sheet.append_row([
+                new_row = [
                     datetime.now(TZ).strftime("%d/%m/%Y"),
                     staff_name,
                     now,
@@ -451,7 +451,23 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     "",
                     "",
                     "Tên chưa duyệt" if unknown_staff else ""
-                ])
+                ]
+
+                sheet.append_row(new_row, value_input_option="USER_ENTERED")
+
+                last_row = len(sheet.get_all_values())
+
+                sheet.format(
+                    f"A{last_row}:G{last_row}",
+                    {
+                        "borders": {
+                            "top": {"style": "SOLID"},
+                            "bottom": {"style": "SOLID"},
+                            "left": {"style": "SOLID"},
+                            "right": {"style": "SOLID"}
+                        }
+                    }
+                )
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
         )
