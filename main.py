@@ -1711,7 +1711,11 @@ async def fixcheckin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             row.get("Ngày") == today
             and str(row.get("Nhân viên", "")).strip().lower() == staff_name.lower()
         ):
-            sheet.update_cell(row_index, 3, "'" + fix_time)
+            sheet.update(
+                f"C{row_index}",
+                [[fix_time]],
+                value_input_option="RAW"
+            )
             await update.message.reply_text(f"✅ Đã sửa CHECKIN {staff_name} thành {fix_time}")
             return
 
@@ -1747,7 +1751,11 @@ async def fixcheckout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             row.get("Ngày") == today
             and str(row.get("Nhân viên", "")).strip().lower() == staff_name.lower()
         ):
-            sheet.update_cell(row_index, 4, "'" + fix_time)
+            sheet.update(
+                f"D{row_index}",
+                [[fix_time]],
+                value_input_option="RAW"
+            )
             await update.message.reply_text(f"✅ Đã sửa CHECKOUT {staff_name} thành {fix_time}")
             return
 
