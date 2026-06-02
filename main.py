@@ -466,7 +466,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
                 sheet.append_row(
                     new_row,
-                    value_input_option="USER_ENTERED",
+                    value_input_option="RAW",
                     insert_data_option="INSERT_ROWS"
                 )
 
