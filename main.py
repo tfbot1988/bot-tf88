@@ -410,7 +410,18 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_name = staff_name.strip().title()
-        staff_list = DATA.get("staff", {}).get(chat_id, [])
+        staff_sheet = get_worksheet("00_Nhan_Vien")
+        staff_list = []
+
+        if staff_sheet:
+            staff_rows = staff_sheet.get_all_records()
+
+            for row in staff_rows:
+                name = str(row.get("Tên nhân viên", "")).strip().title()
+                status = str(row.get("Trạng thái", "")).strip().lower()
+
+                if name and status == "active":
+                    staff_list.append(name)
         print("STAFF LIST:", staff_list)
         print("STAFF NAME:", staff_name)
         if not staff_name:
@@ -453,21 +464,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     "Tên chưa duyệt" if unknown_staff else ""
                 ]
 
-                sheet.append_row(new_row, value_input_option="USER_ENTERED")
-
-                last_row = len(sheet.get_all_values())
-
-                sheet.format(
-                    f"A{last_row}:G{last_row}",
-                    {
-                        "borders": {
-                            "top": {"style": "SOLID"},
-                            "bottom": {"style": "SOLID"},
-                            "left": {"style": "SOLID"},
-                            "right": {"style": "SOLID"}
-                        }
-                    }
+                sheet.append_row(
+                    new_row,
+                    value_input_option="USER_ENTERED",
+                    insert_data_option="INSERT_ROWS"
                 )
+
+                
         await update.message.reply_text(
             f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}"
         )
@@ -477,8 +480,20 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if text_upper.startswith("CHECKOUT"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[8:].strip()
         staff_name = staff_name.strip().title()
-        staff_list = DATA.get("staff", {}).get(chat_id, [])
+        staff_sheet = get_worksheet("00_Nhan_Vien")
+        staff_list = []
 
+        if staff_sheet:
+            staff_rows = staff_sheet.get_all_records()
+
+            for row in staff_rows:
+                name = str(row.get("Tên nhân viên", "")).strip().title()
+                status = str(row.get("Trạng thái", "")).strip().lower()
+
+                if name and status == "active":
+                    staff_list.append(name)
+        print("STAFF LIST:", staff_list)
+        print("STAFF NAME:", staff_name)
         if not staff_name:
             await update.message.reply_text("❌ Vui lòng ghi đúng: CHECKOUT Tên")
             return
