@@ -1570,7 +1570,7 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Lỗi đọc Google Sheet:\n{e}")
         return
     totals = {}
-    issues = []
+    issues = set()
     lines = [f"💰 BẢNG LƯƠNG TẠM TUẦN NÀY", ""]
 
 
@@ -1586,10 +1586,10 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not staff_name:
             continue
         if not checkin or not checkout:
-            issues.append(f"- {staff_name}: thiếu CHECKIN/CHECKOUT")
+            issues.add(f"- {staff_name}: thiếu CHECKIN/CHECKOUT")
             continue
         if not duration_text:
-            issues.append(f"- {staff_name}: chưa có thời lượng")
+            issues.add(f"- {staff_name}: chưa có thời lượng")
             continue
 
 
@@ -1679,7 +1679,7 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("")
     if issues:
         lines.append("⚠️ Dữ liệu cần Mr.Win kiểm tra:")
-        lines.extend(issues)
+        lines.extend(sorted(issues))
 
     await update.message.reply_text("\n".join(lines))
 async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
