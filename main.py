@@ -531,7 +531,11 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 records = sheet.get_all_records()
 
                 for i, row in enumerate(records, start=2):
-                    if row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y") and str(row["Nhân viên"]).lower() == staff_name.lower():
+                    if (
+                        row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y")
+                        and str(row["Nhân viên"]).strip().lower() == staff_name.lower()
+                        and not str(row.get("Checkout", "")).strip()
+                    ):
                         sheet.update_cell(i, 4, now)
 
                         checkin_time = datetime.strptime(row["Checkin"], "%H:%M")
