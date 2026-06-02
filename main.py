@@ -1410,24 +1410,17 @@ async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         else:
             inactive_staff.append(name)
 
-    if not active_staff and not inactive_staff:
-        await update.message.reply_text("📋 Chưa có nhân viên nào trong danh sách.")
+    if not active_staff:
+        await update.message.reply_text("📋 Chưa có nhân viên active nào.")
         return
 
-    lines = ["📋 DANH SÁCH NHÂN VIÊN TF", ""]
+    lines = ["📋 DANH SÁCH NHÂN VIÊN ĐANG LÀM TF", ""]
 
-    if active_staff:
-        lines.append("✅ Đang làm:")
-        for index, name in enumerate(active_staff, start=1):
-            lines.append(f"{index}. {name}")
+    for index, name in enumerate(active_staff, start=1):
+        lines.append(f"{index}. {name}")
 
-    if inactive_staff:
-        lines.append("")
-        lines.append("⛔ Đã nghỉ / inactive:")
-        for index, name in enumerate(inactive_staff, start=1):
-            lines.append(f"{index}. {name}")
-
-    await update.message.reply_text("\n".join(lines))
+    await update.message.reply_text("\n".join(lines))  
+   
 async def checkshift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
