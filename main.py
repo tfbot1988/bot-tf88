@@ -1759,9 +1759,7 @@ async def fixcheckout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [[fix_time]],
                 value_input_option="RAW"
             )
-            sheet.format(f"D{row_index}", {
-                "horizontalAlignment": "LEFT"
-            })
+            
             await update.message.reply_text(f"✅ Đã sửa CHECKOUT {staff_name} thành {fix_time}")
             return
 
