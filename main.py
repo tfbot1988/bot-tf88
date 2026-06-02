@@ -530,7 +530,9 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
                 records = sheet.get_all_records()
 
-                for i, row in enumerate(records, start=2):
+                for idx in range(len(records) - 1, -1, -1):
+                    row = records[idx]
+                    i = idx + 2
                     if (
                         row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y")
                         and str(row["Nhân viên"]).strip().lower() == staff_name.lower()
