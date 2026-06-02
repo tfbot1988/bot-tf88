@@ -1682,6 +1682,76 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.extend(sorted(issues))
 
     await update.message.reply_text("\n".join(lines))
+async def fixcheckin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.reply_text("⛔ Chỉ admin mới được sửa chấm công.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("❌ Cách dùng: /fixcheckin Tên HH:MM")
+        return
+
+    staff_name = " ".join(context.args[:-1]).strip().title()
+    fix_time = context.args[-1].strip()
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    sheet = get_worksheet("01_Cham_Cong")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 01_Cham_Cong.")
+        return
+
+    records = sheet.get_all_records()
+
+    for idx in range(len(records) - 1, -1, -1):
+        row = records[idx]
+        row_index = idx + 2
+
+        if (
+            row.get("Ngày") == today
+            and str(row.get("Nhân viên", "")).strip().lower() == staff_name.lower()
+        ):
+            sheet.update_cell(row_index, 3, fix_time)
+            await update.message.reply_text(f"✅ Đã sửa CHECKIN {staff_name} thành {fix_time}")
+            return
+
+    await update.message.reply_text(f"⚠️ Không tìm thấy dòng chấm công hôm nay của {staff_name}.")
+
+
+async def fixcheckout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.reply_text("⛔ Chỉ admin mới được sửa chấm công.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("❌ Cách dùng: /fixcheckout Tên HH:MM")
+        return
+
+    staff_name = " ".join(context.args[:-1]).strip().title()
+    fix_time = context.args[-1].strip()
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    sheet = get_worksheet("01_Cham_Cong")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 01_Cham_Cong.")
+        return
+
+    records = sheet.get_all_records()
+
+    for idx in range(len(records) - 1, -1, -1):
+        row = records[idx]
+        row_index = idx + 2
+
+        if (
+            row.get("Ngày") == today
+            and str(row.get("Nhân viên", "")).strip().lower() == staff_name.lower()
+        ):
+            sheet.update_cell(row_index, 4, fix_time)
+            await update.message.reply_text(f"✅ Đã sửa CHECKOUT {staff_name} thành {fix_time}")
+            return
+
+    await update.message.reply_text(f"⚠️ Không tìm thấy dòng chấm công hôm nay của {staff_name}.")
 async def clearattendance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -3058,6 +3128,8 @@ def main() -> None:
     app.add_handler(CommandHandler("payrollsummary", payrollsummary_cmd))
     app.add_handler(CommandHandler("payrollexport", payrollexport_cmd))
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
+    app.add_handler(CommandHandler("fixcheckin", fixcheckin_cmd))
+    app.add_handler(CommandHandler("fixcheckout", fixcheckout_cmd))
     app.add_handler(CommandHandler("addmonthly", addmonthly_cmd))
     app.add_handler(CommandHandler("monthlylist", monthlylist_cmd))
     app.add_handler(CommandHandler("removemonthly", removemonthly_cmd))
