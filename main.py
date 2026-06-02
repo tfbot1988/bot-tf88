@@ -1716,6 +1716,9 @@ async def fixcheckin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [[fix_time]],
                 value_input_option="RAW"
             )
+            sheet.format(f"C{row_index}", {
+                "horizontalAlignment": "LEFT"
+            })
             await update.message.reply_text(f"✅ Đã sửa CHECKIN {staff_name} thành {fix_time}")
             return
 
@@ -1756,6 +1759,9 @@ async def fixcheckout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [[fix_time]],
                 value_input_option="RAW"
             )
+            sheet.format(f"D{row_index}", {
+                "horizontalAlignment": "LEFT"
+            })
             await update.message.reply_text(f"✅ Đã sửa CHECKOUT {staff_name} thành {fix_time}")
             return
 
