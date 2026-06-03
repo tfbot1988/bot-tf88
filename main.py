@@ -1586,10 +1586,8 @@ async def payrollweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not staff_name:
             continue
         if not checkin or not checkout:
-            issues.add(f"- {staff_name}: thiếu CHECKIN/CHECKOUT")
             continue
         if not duration_text:
-            issues.add(f"- {staff_name}: chưa có thời lượng")
             continue
 
 
