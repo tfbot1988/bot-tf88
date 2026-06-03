@@ -1323,14 +1323,35 @@ async def resetfinance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Đã reset Doanh thu, Chi phí, P/L và giữ lại tiêu đề Google Sheet."
     )
 async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-
     today = datetime.now(TZ).strftime("%d/%m/%Y")
 
-    revenue_today = DATA.get("revenue", {}).get(chat_id, {}).get(today, 0)
+    revenue_today = 0
+    expense_total = 0
 
-    expense_items = DATA.get("expense", {}).get(chat_id, {}).get(today, [])
-    expense_total = sum(item.get("amount", 0) for item in expense_items)
+    try:
+        revenue_ws = get_worksheet("04_Doanh_Thu")
+        revenue_rows = revenue_ws.get_all_records()
+
+        for row in revenue_rows:
+            if str(row.get("Ngày", "")).strip() == today:
+                amount = str(row.get("Doanh thu", "0")).replace(".", "").replace(",", "").strip()
+                revenue_today = int(amount) if amount else 0
+                break
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet doanh thu: {e}")
+        return
+
+    try:
+        expense_ws = get_worksheet("05_Chi_Phi")
+        expense_rows = expense_ws.get_all_records()
+
+        for row in expense_rows:
+            if str(row.get("Ngày", "")).strip() == today:
+                amount = str(row.get("Số tiền", "0")).replace(".", "").replace(",", "").strip()
+                expense_total += int(amount) if amount else 0
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet chi phí: {e}")
+        return
 
     profit = revenue_today - expense_total
 
@@ -1339,9 +1360,10 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "",
         f"💰 Doanh thu: {revenue_today:,}đ".replace(",", "."),
         f"💸 Chi phí: {expense_total:,}đ".replace(",", "."),
-        "------------------",
+        "----------------",
         f"🏆 Lợi nhuận: {profit:,}đ".replace(",", "."),
     ]
+
     try:
         sheet = get_worksheet("06_P_L")
         if sheet:
@@ -1362,6 +1384,7 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 sheet.append_row([today, revenue_today, expense_total, profit])
     except Exception as e:
         print("Google Sheet P/L error:", e)
+
     await update.message.reply_text("\n".join(lines))
 async def financeweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     today_dt = datetime.now(TZ)
