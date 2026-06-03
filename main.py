@@ -1372,7 +1372,7 @@ async def financeweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_expense = 0
 
     try:
-        revenue_ws = sh.worksheet("04_Doanh_Thu")
+        revenue_ws = get_worksheet("04_Doanh_Thu")
         revenue_rows = revenue_ws.get_all_records()
 
         for row in revenue_rows:
@@ -1394,7 +1394,7 @@ async def financeweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        expense_ws = sh.worksheet("04_Doanh_Thu")
+        expense_ws = get_worksheet("05_Chi_Phi")
         expense_rows = expense_ws.get_all_records()
 
         for row in expense_rows:
