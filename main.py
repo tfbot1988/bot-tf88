@@ -1363,6 +1363,132 @@ async def pl_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print("Google Sheet P/L error:", e)
     await update.message.reply_text("\n".join(lines))
+async def financeweek_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    today_dt = datetime.now(TZ)
+    start_dt = today_dt - timedelta(days=today_dt.weekday())
+    end_dt = start_dt + timedelta(days=6)
+
+    total_revenue = 0
+    total_expense = 0
+
+    try:
+        revenue_ws = get_ws("04_Doanh_Thu")
+        revenue_rows = revenue_ws.get_all_records()
+
+        for row in revenue_rows:
+            row_date = str(row.get("Ngày", "")).strip()
+            if not row_date:
+                continue
+
+            try:
+                row_dt = datetime.strptime(row_date, "%d/%m/%Y").replace(tzinfo=TZ)
+            except Exception:
+                continue
+
+            if start_dt.date() <= row_dt.date() <= end_dt.date():
+                amount = str(row.get("Doanh thu", "0")).replace(".", "").replace(",", "").strip()
+                total_revenue += int(amount) if amount else 0
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet doanh thu: {e}")
+        return
+
+    try:
+        expense_ws = get_ws("05_Chi_Phi")
+        expense_rows = expense_ws.get_all_records()
+
+        for row in expense_rows:
+            row_date = str(row.get("Ngày", "")).strip()
+            if not row_date:
+                continue
+
+            try:
+                row_dt = datetime.strptime(row_date, "%d/%m/%Y").replace(tzinfo=TZ)
+            except Exception:
+                continue
+
+            if start_dt.date() <= row_dt.date() <= end_dt.date():
+                amount = str(row.get("Số tiền", "0")).replace(".", "").replace(",", "").strip()
+                total_expense += int(amount) if amount else 0
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet chi phí: {e}")
+        return
+
+    profit = total_revenue - total_expense
+
+    await update.message.reply_text(
+        f"📊 P/L TUẦN TF\n"
+        f"Từ {start_dt.strftime('%d/%m/%Y')} đến {end_dt.strftime('%d/%m/%Y')}\n\n"
+        f"💰 Doanh thu: {total_revenue:,}đ".replace(",", ".") + "\n"
+        f"💸 Chi phí: {total_expense:,}đ".replace(",", ".") + "\n"
+        "────────────────\n"
+        f"🏆 Lợi nhuận: {profit:,}đ".replace(",", ".")
+    )
+
+
+async def financemonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    today_dt = datetime.now(TZ)
+    current_month = today_dt.month
+    current_year = today_dt.year
+
+    total_revenue = 0
+    total_expense = 0
+
+    try:
+        revenue_ws = get_ws("04_Doanh_Thu")
+        revenue_rows = revenue_ws.get_all_records()
+
+        for row in revenue_rows:
+            row_date = str(row.get("Ngày", "")).strip()
+            if not row_date:
+                continue
+
+            try:
+                row_dt = datetime.strptime(row_date, "%d/%m/%Y").replace(tzinfo=TZ)
+            except Exception:
+                continue
+
+            if row_dt.month == current_month and row_dt.year == current_year:
+                amount = str(row.get("Doanh thu", "0")).replace(".", "").replace(",", "").strip()
+                total_revenue += int(amount) if amount else 0
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet doanh thu: {e}")
+        return
+
+    try:
+        expense_ws = get_ws("05_Chi_Phi")
+        expense_rows = expense_ws.get_all_records()
+
+        for row in expense_rows:
+            row_date = str(row.get("Ngày", "")).strip()
+            if not row_date:
+                continue
+
+            try:
+                row_dt = datetime.strptime(row_date, "%d/%m/%Y").replace(tzinfo=TZ)
+            except Exception:
+                continue
+
+            if row_dt.month == current_month and row_dt.year == current_year:
+                amount = str(row.get("Số tiền", "0")).replace(".", "").replace(",", "").strip()
+                total_expense += int(amount) if amount else 0
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc sheet chi phí: {e}")
+        return
+
+    profit = total_revenue - total_expense
+
+    await update.message.reply_text(
+        f"📊 P/L THÁNG TF\n"
+        f"Tháng {today_dt.strftime('%m/%Y')}\n\n"
+        f"💰 Doanh thu: {total_revenue:,}đ".replace(",", ".") + "\n"
+        f"💸 Chi phí: {total_expense:,}đ".replace(",", ".") + "\n"
+        "────────────────\n"
+        f"🏆 Lợi nhuận: {profit:,}đ".replace(",", ".")
+    )    
 async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -3163,6 +3289,8 @@ def main() -> None:
     app.add_handler(CommandHandler("thu", incomelist_cmd))
     app.add_handler(CommandHandler("expenselist", expenselist_cmd))
     app.add_handler(CommandHandler("pl", pl_cmd))
+    app.add_handler(CommandHandler("financeweek", financeweek_cmd))
+    app.add_handler(CommandHandler("financemonth", financemonth_cmd))
     app.add_handler(CommandHandler("resetfinance", resetfinance_cmd))
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
