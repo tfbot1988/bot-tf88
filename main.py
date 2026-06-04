@@ -1065,7 +1065,75 @@ async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Ngày: {work_date}\n"
         f"Giờ: {start_time} - {end_time}\n"
         f"Điểm bán: {location}"
-    )        
+    )
+async def lich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    try:
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc 12_lich_tuan:\n{e}")
+        return
+
+    if not records:
+        await update.message.reply_text("📅 Chưa có lịch tuần.")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_order = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    shift_order = ["Sáng", "Tối"]
+
+    grouped = {}
+
+    for row in records:
+        if str(row.get("Tuần", "")).strip() != week_key:
+            continue
+
+        day = str(row.get("Thứ", "")).strip()
+        shift = str(row.get("Ca", "")).strip()
+        staff = str(row.get("Nhân viên", "")).strip()
+        start_time = str(row.get("Giờ bắt đầu", "")).strip()
+        end_time = str(row.get("Giờ kết thúc", "")).strip()
+
+        if not day or not shift or not staff:
+            continue
+
+        grouped.setdefault(day, {}).setdefault(shift, [])
+        grouped[day][shift].append({
+            "staff": staff,
+            "start_time": start_time,
+            "end_time": end_time,
+        })
+
+    if not grouped:
+        await update.message.reply_text(f"📅 Chưa có lịch tuần {week_key}.")
+        return
+
+    lines = [f"📅 LỊCH TUẦN {week_key}", ""]
+
+    for day in day_order:
+        if day not in grouped:
+            continue
+
+        lines.append(f"{day}:")
+
+        for shift in shift_order:
+            shift_items = grouped.get(day, {}).get(shift, [])
+            for item in shift_items:
+                time_text = ""
+                if item["start_time"] or item["end_time"]:
+                    time_text = f" ({item['start_time']}-{item['end_time']})"
+
+                lines.append(f"- Ca {shift}: {item['staff']}{time_text}")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))            
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3568,6 +3636,7 @@ def main() -> None:
     app.add_handler(CommandHandler("ranh", ranh_cmd))
     app.add_handler(CommandHandler("checkranh", checkranh_cmd))
     app.add_handler(CommandHandler("xepca", xepca_cmd))
+    app.add_handler(CommandHandler("lich", lich_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
