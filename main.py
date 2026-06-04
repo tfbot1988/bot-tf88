@@ -818,7 +818,71 @@ async def shift_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"✅ Đã xếp lịch: {day_names[day]} - Ca {shift_names[shift]}: {staff}"
     )
 
+async def ranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
 
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Cách dùng: /ranh <ngày> <ca> <tên>\n"
+            "Ví dụ: /ranh t2 sang Huy\n"
+            "Ngày: t2,t3,t4,t5,t6,t7,cn\n"
+            "Ca: sang hoặc toi"
+        )
+        return
+
+    day = args[0].lower()
+    shift = args[1].lower()
+    staff = " ".join(args[2:]).strip()
+
+    day_names = {
+        "t2": "T2",
+        "t3": "T3",
+        "t4": "T4",
+        "t5": "T5",
+        "t6": "T6",
+        "t7": "T7",
+        "cn": "CN",
+    }
+
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    if day not in day_names:
+        await update.message.reply_text("Ngày chưa đúng. Dùng: t2,t3,t4,t5,t6,t7,cn")
+        return
+
+    if shift not in shift_names:
+        await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
+        return
+
+    week_key = datetime.now(TZ).strftime("%Y-W%U")
+    today = datetime.now(TZ).strftime("%d/%m/%Y")
+
+    sheet = get_worksheet("11_lich_ranh")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 11_lich_ranh.")
+        return
+
+    sheet.append_row(
+        [
+            week_key,
+            today,
+            day_names[day],
+            shift_names[shift],
+            staff,
+            "AVAILABLE",
+            "",
+        ],
+        value_input_option="RAW",
+        insert_data_option="INSERT_ROWS",
+    )
+
+    await update.message.reply_text(
+        f"✅ Đã ghi lịch rảnh:\n"
+        f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
+    )
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3318,6 +3382,7 @@ def main() -> None:
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
+    app.add_handler(CommandHandler("ranh", ranh_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
