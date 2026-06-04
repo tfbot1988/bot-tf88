@@ -1031,7 +1031,7 @@ async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     and status == "active"
                 ):
                     start_time = str(row.get("Giờ bắt đầu", "")).strip()
-                    end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", ""))).strip()
+                    end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", row.get("Giờ kế thúc ", ""))))).strip()
                     location = str(row.get("Điểm bán", "TF Home")).strip() or "TF Home"
                     break
         except Exception:
