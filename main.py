@@ -857,8 +857,25 @@ async def ranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
         return
 
-    week_key = datetime.now(TZ).strftime("%Y-W%U")
-    today = datetime.now(TZ).strftime("%d/%m/%Y")
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_to_weekday = {
+        "t2": 0,
+        "t3": 1,
+        "t4": 2,
+        "t5": 3,
+        "t6": 4,
+        "t7": 5,
+        "cn": 6,
+    }
+
+    days_ahead = day_to_weekday[day] - now_dt.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+
+    target_date = now_dt + timedelta(days=days_ahead)
+    today = target_date.strftime("%d/%m/%Y")
 
     sheet = get_worksheet("11_lich_ranh")
     if not sheet:
