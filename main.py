@@ -1160,7 +1160,76 @@ async def lich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         lines.append("")
 
-    await update.message.reply_text("\n".join(lines))            
+    await update.message.reply_text("\n".join(lines))
+async def xoaca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
+
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Cách dùng: /xoaca <ngày> <ca> <tên>\n"
+            "Ví dụ: /xoaca t2 sang Huy"
+        )
+        return
+
+    day = args[0].lower()
+    shift = args[1].lower()
+    staff = " ".join(args[2:]).strip()
+
+    day_names = {
+        "t2": "T2", "t3": "T3", "t4": "T4",
+        "t5": "T5", "t6": "T6", "t7": "T7", "cn": "CN",
+    }
+
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    if day not in day_names:
+        await update.message.reply_text("Ngày chưa đúng. Dùng: t2,t3,t4,t5,t6,t7,cn")
+        return
+
+    if shift not in shift_names:
+        await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    for idx, row in enumerate(records):
+        row_index = idx + 2
+
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        row_day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        row_shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        row_staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+
+        if (
+            row_week == week_key
+            and row_day == day_names[day]
+            and row_shift == shift_names[shift]
+            and row_staff.lower() == staff.lower()
+        ):
+            sheet.update(f"J{row_index}", [["CANCELLED"]], value_input_option="RAW")
+            sheet.update(f"I{row_index}", [["Đã hủy ca"]], value_input_option="RAW")
+
+            await update.message.reply_text(
+                f"✅ Đã hủy ca:\n"
+                f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
+            )
+            return
+
+    await update.message.reply_text(
+        f"⚠️ Không tìm thấy ca cần hủy:\n"
+        f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
+    )                
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3664,6 +3733,7 @@ def main() -> None:
     app.add_handler(CommandHandler("checkranh", checkranh_cmd))
     app.add_handler(CommandHandler("xepca", xepca_cmd))
     app.add_handler(CommandHandler("lich", lich_cmd))
+    app.add_handler(CommandHandler("xoaca", xoaca_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
