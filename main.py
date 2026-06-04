@@ -1261,6 +1261,7 @@ async def tonggio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
         start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
         end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+        print("TONGGIO:", staff, start_time, end_time)
 
         if not staff or not start_time or not end_time:
             continue
