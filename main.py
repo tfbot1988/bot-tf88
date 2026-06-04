@@ -1235,7 +1235,55 @@ async def xoaca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         f"⚠️ Không tìm thấy ca cần hủy:\n"
         f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
-    )                
+    )
+async def tonggio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    totals = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+
+        if not staff or not start_time or not end_time:
+            continue
+
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+            hours = (end_dt - start_dt).seconds / 3600
+        except Exception:
+            continue
+
+        totals[staff] = totals.get(staff, 0) + hours
+
+    if not totals:
+        await update.message.reply_text(f"📊 Chưa có dữ liệu giờ làm tuần {week_key}.")
+        return
+
+    lines = [f"📊 TỔNG GIỜ DỰ KIẾN TUẦN {week_key}", ""]
+
+    for staff, hours in sorted(totals.items()):
+        lines.append(f"- {staff}: {hours:g} giờ")
+
+    await update.message.reply_text("\n".join(lines))                    
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3740,6 +3788,7 @@ def main() -> None:
     app.add_handler(CommandHandler("xepca", xepca_cmd))
     app.add_handler(CommandHandler("lich", lich_cmd))
     app.add_handler(CommandHandler("xoaca", xoaca_cmd))
+    app.add_handler(CommandHandler("tonggio", tonggio_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
