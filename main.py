@@ -1020,6 +1020,7 @@ async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         try:
             configs = config_sheet.get_all_records()
             for row in configs:
+                print("CONFIG ROW:", row)
                 if (
                     str(row.get("Thứ", "")).strip() == day_names[day]
                     and str(row.get("Ca", "")).strip() == shift_names[shift]
