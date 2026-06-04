@@ -1042,7 +1042,34 @@ async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
         return
 
+    
+    existing_records = sheet.get_all_records()
+
+    for idx, row in enumerate(existing_records):
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        row_date = str(row.get("Ngày", row.get("Ngày ", ""))).strip()
+        row_day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        row_shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        row_staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        print("CHECK:", row_week, row_date, row_day, row_shift, row_staff)
+        print("TARGET:", week_key, work_date, day_names[day], shift_names[shift], staff)
+
+        
+        if (
+            row_week == week_key
+            and row_date == work_date
+            and row_day == day_names[day]
+            and row_shift == shift_names[shift]
+            and row_staff.lower() == staff.lower()
+        ):
+            await update.message.reply_text(
+                f"⚠️ Ca này đã tồn tại:\n"
+                f"{staff} - {day_names[day]} - Ca {shift_names[shift]}\n"
+                f"Ngày: {work_date}"
+            )
+            return    
     sheet.append_row(
+        
         [
             week_key,
             work_date,
