@@ -1021,10 +1021,14 @@ async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             configs = config_sheet.get_all_records()
             for row in configs:
                 print("CONFIG ROW:", row)
+                thu = str(row.get("Thứ ", row.get("Thứ", ""))).strip()
+                ca = str(row.get("Ca", "")).strip()
+                status = str(row.get("Trạng thái", "")).strip().lower()
+
                 if (
-                    str(row.get("Thứ", "")).strip() == day_names[day]
-                    and str(row.get("Ca", "")).strip() == shift_names[shift]
-                    and str(row.get("Trạng thái", "")).strip().lower() == "active"
+                    thu == day_names[day]
+                    and ca == shift_names[shift]
+                    and status == "active"
                 ):
                     start_time = str(row.get("Giờ bắt đầu", "")).strip()
                     end_time = str(row.get("Giờ kết thúc", "")).strip()
