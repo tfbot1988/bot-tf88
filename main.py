@@ -900,6 +900,68 @@ async def ranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"✅ Đã ghi lịch rảnh:\n"
         f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
     )
+async def checkranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("11_lich_ranh")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 11_lich_ranh.")
+        return
+
+    try:
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc 11_lich_ranh:\n{e}")
+        return
+
+    if not records:
+        await update.message.reply_text("📋 Chưa có dữ liệu lịch rảnh.")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_order = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    shift_order = ["Sáng", "Tối"]
+
+    grouped = {}
+
+    for row in records:
+        if str(row.get("Tuần", "")).strip() != week_key:
+            continue
+
+        if str(row.get("Trạng thái", "")).strip().upper() != "AVAILABLE":
+            continue
+
+        day = str(row.get("Thứ", "")).strip()
+        shift = str(row.get("Ca", "")).strip()
+        staff = str(row.get("Nhân viên", "")).strip()
+
+        if not day or not shift or not staff:
+            continue
+
+        grouped.setdefault(day, {}).setdefault(shift, [])
+        if staff not in grouped[day][shift]:
+            grouped[day][shift].append(staff)
+
+    if not grouped:
+        await update.message.reply_text("📋 Tuần này chưa có ai báo lịch rảnh.")
+        return
+
+    lines = [f"📋 LỊCH RẢNH TUẦN {week_key}", ""]
+
+    for day in day_order:
+        if day not in grouped:
+            continue
+
+        lines.append(f"{day}:")
+
+        for shift in shift_order:
+            staff_list = grouped.get(day, {}).get(shift, [])
+            if staff_list:
+                lines.append(f"- Ca {shift}: {', '.join(staff_list)}")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))    
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3400,6 +3462,7 @@ def main() -> None:
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("ranh", ranh_cmd))
+    app.add_handler(CommandHandler("checkranh", checkranh_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
