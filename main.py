@@ -1118,6 +1118,12 @@ async def lich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     grouped = {}
 
     for row in records:
+        status = str(
+            row.get("Trạng thái", row.get("Trạng thái ", ""))
+        ).strip().upper()
+
+        if status == "CANCELLED":
+            continue
         row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
         if row_week != week_key:
             continue
