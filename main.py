@@ -1091,15 +1091,15 @@ async def lich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     grouped = {}
 
     for row in records:
-        if str(row.get("Tuần", "")).strip() != week_key:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
             continue
 
-        day = str(row.get("Thứ", "")).strip()
-        shift = str(row.get("Ca", "")).strip()
-        staff = str(row.get("Nhân viên", "")).strip()
-        start_time = str(row.get("Giờ bắt đầu", "")).strip()
-        end_time = str(row.get("Giờ kết thúc", "")).strip()
-
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", ""))).strip()
         if not day or not shift or not staff:
             continue
 
