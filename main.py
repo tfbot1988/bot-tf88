@@ -857,8 +857,25 @@ async def ranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
         return
 
-    week_key = datetime.now(TZ).strftime("%Y-W%U")
-    today = datetime.now(TZ).strftime("%d/%m/%Y")
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_to_weekday = {
+        "t2": 0,
+        "t3": 1,
+        "t4": 2,
+        "t5": 3,
+        "t6": 4,
+        "t7": 5,
+        "cn": 6,
+    }
+
+    days_ahead = day_to_weekday[day] - now_dt.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+
+    target_date = now_dt + timedelta(days=days_ahead)
+    today = target_date.strftime("%d/%m/%Y")
 
     sheet = get_worksheet("11_lich_ranh")
     if not sheet:
@@ -883,6 +900,633 @@ async def ranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"✅ Đã ghi lịch rảnh:\n"
         f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
     )
+async def checkranh_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("11_lich_ranh")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 11_lich_ranh.")
+        return
+
+    try:
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc 11_lich_ranh:\n{e}")
+        return
+
+    if not records:
+        await update.message.reply_text("📋 Chưa có dữ liệu lịch rảnh.")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_order = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    shift_order = ["Sáng", "Tối"]
+
+    grouped = {}
+
+    for row in records:
+        if str(row.get("Tuần", "")).strip() != week_key:
+            continue
+
+        if str(row.get("Trạng thái", "")).strip().upper() != "AVAILABLE":
+            continue
+
+        day = str(row.get("Thứ", "")).strip()
+        shift = str(row.get("Ca", "")).strip()
+        staff = str(row.get("Nhân viên", "")).strip()
+
+        if not day or not shift or not staff:
+            continue
+
+        grouped.setdefault(day, {}).setdefault(shift, [])
+        if staff not in grouped[day][shift]:
+            grouped[day][shift].append(staff)
+
+    if not grouped:
+        await update.message.reply_text("📋 Tuần này chưa có ai báo lịch rảnh.")
+        return
+
+    lines = [f"📋 LỊCH RẢNH TUẦN {week_key}", ""]
+
+    for day in day_order:
+        if day not in grouped:
+            continue
+
+        lines.append(f"{day}:")
+
+        for shift in shift_order:
+            staff_list = grouped.get(day, {}).get(shift, [])
+            if staff_list:
+                lines.append(f"- Ca {shift}: {', '.join(staff_list)}")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))
+async def xepca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
+
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Cách dùng: /xepca <ngày> <ca> <tên>\n"
+            "Ví dụ: /xepca t2 sang Huy\n"
+            "Ngày: t2,t3,t4,t5,t6,t7,cn\n"
+            "Ca: sang hoặc toi"
+        )
+        return
+
+    day = args[0].lower()
+    shift = args[1].lower()
+    staff = " ".join(args[2:]).strip()
+
+    day_names = {
+        "t2": "T2", "t3": "T3", "t4": "T4",
+        "t5": "T5", "t6": "T6", "t7": "T7", "cn": "CN",
+    }
+
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    if day not in day_names:
+        await update.message.reply_text("Ngày chưa đúng. Dùng: t2,t3,t4,t5,t6,t7,cn")
+        return
+
+    if shift not in shift_names:
+        await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_to_weekday = {
+        "t2": 0, "t3": 1, "t4": 2,
+        "t5": 3, "t6": 4, "t7": 5, "cn": 6,
+    }
+
+    days_ahead = day_to_weekday[day] - now_dt.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+
+    target_date = now_dt + timedelta(days=days_ahead)
+    work_date = target_date.strftime("%d/%m/%Y")
+
+    start_time = ""
+    end_time = ""
+    location = "TF Home"
+
+    config_sheet = get_worksheet("13_cau_hinh_ca")
+    if config_sheet:
+        try:
+            configs = config_sheet.get_all_records()
+            for row in configs:
+                print("CONFIG ROW:", row)
+                thu = str(row.get("Thứ ", row.get("Thứ", ""))).strip()
+                ca = str(row.get("Ca", "")).strip()
+                status = str(row.get("Trạng thái", "")).strip().lower()
+
+                if (
+                    thu == day_names[day]
+                    and ca == shift_names[shift]
+                    and status == "active"
+                ):
+                    start_time = str(row.get("Giờ bắt đầu", "")).strip()
+                    end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", row.get("Giờ kế thúc ", ""))))).strip()
+                    location = str(row.get("Điểm bán", "TF Home")).strip() or "TF Home"
+                    break
+        except Exception:
+            pass
+
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    
+    existing_records = sheet.get_all_records()
+
+    for idx, row in enumerate(existing_records):
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        row_date = str(row.get("Ngày", row.get("Ngày ", ""))).strip()
+        row_day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        row_shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        row_staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        print("CHECK:", row_week, row_date, row_day, row_shift, row_staff)
+        print("TARGET:", week_key, work_date, day_names[day], shift_names[shift], staff)
+
+        
+        if (
+            row_week == week_key
+            and row_date == work_date
+            and row_day == day_names[day]
+            and row_shift == shift_names[shift]
+            and row_staff.lower() == staff.lower()
+        ):
+            await update.message.reply_text(
+                f"⚠️ Ca này đã tồn tại:\n"
+                f"{staff} - {day_names[day]} - Ca {shift_names[shift]}\n"
+                f"Ngày: {work_date}"
+            )
+            return    
+    sheet.append_row(
+        
+        [
+            week_key,
+            work_date,
+            day_names[day],
+            shift_names[shift],
+            start_time,
+            end_time,
+            staff,
+            location,
+            "CONFIRMED",
+            "",
+        ],
+        value_input_option="RAW",
+        insert_data_option="INSERT_ROWS",
+    )
+
+    await update.message.reply_text(
+        f"✅ Đã xếp ca:\n"
+        f"{staff} - {day_names[day]} - Ca {shift_names[shift]}\n"
+        f"Ngày: {work_date}\n"
+        f"Giờ: {start_time} - {end_time}\n"
+        f"Điểm bán: {location}"
+    )
+async def lich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    try:
+        records = sheet.get_all_records()
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc 12_lich_tuan:\n{e}")
+        return
+
+    if not records:
+        await update.message.reply_text("📅 Chưa có lịch tuần.")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_order = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    shift_order = ["Sáng", "Tối"]
+
+    grouped = {}
+
+    for row in records:
+        status = str(
+            row.get("Trạng thái", row.get("Trạng thái ", ""))
+        ).strip().upper()
+
+        if status == "CANCELLED":
+            continue
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", ""))).strip()
+        if not day or not shift or not staff:
+            continue
+
+        grouped.setdefault(day, {}).setdefault(shift, [])
+        grouped[day][shift].append({
+            "staff": staff,
+            "start_time": start_time,
+            "end_time": end_time,
+        })
+
+    if not grouped:
+        await update.message.reply_text(f"📅 Chưa có lịch tuần {week_key}.")
+        return
+
+    lines = [f"📅 LỊCH TUẦN {week_key}", ""]
+
+    for day in day_order:
+        if day not in grouped:
+            continue
+
+        lines.append(f"{day}:")
+
+        for shift in shift_order:
+            shift_items = grouped.get(day, {}).get(shift, [])
+            for item in shift_items:
+                time_text = ""
+                if item["start_time"] or item["end_time"]:
+                    time_text = f" ({item['start_time']}-{item['end_time']})"
+
+                lines.append(f"- Ca {shift}: {item['staff']}{time_text}")
+
+        lines.append("")
+
+    await update.message.reply_text("\n".join(lines))
+async def xoaca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
+
+    if len(args) < 3:
+        await update.message.reply_text(
+            "Cách dùng: /xoaca <ngày> <ca> <tên>\n"
+            "Ví dụ: /xoaca t2 sang Huy"
+        )
+        return
+
+    day = args[0].lower()
+    shift = args[1].lower()
+    staff = " ".join(args[2:]).strip()
+
+    day_names = {
+        "t2": "T2", "t3": "T3", "t4": "T4",
+        "t5": "T5", "t6": "T6", "t7": "T7", "cn": "CN",
+    }
+
+    shift_names = {
+        "sang": "Sáng",
+        "toi": "Tối",
+    }
+
+    if day not in day_names:
+        await update.message.reply_text("Ngày chưa đúng. Dùng: t2,t3,t4,t5,t6,t7,cn")
+        return
+
+    if shift not in shift_names:
+        await update.message.reply_text("Ca chưa đúng. Dùng: sang hoặc toi")
+        return
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    for idx, row in enumerate(records):
+        row_index = idx + 2
+
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        row_day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        row_shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        row_staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+
+        if (
+            row_week == week_key
+            and row_day == day_names[day]
+            and row_shift == shift_names[shift]
+            and row_staff.lower() == staff.lower()
+        ):
+            sheet.update(f"J{row_index}", [["CANCELLED"]], value_input_option="RAW")
+            sheet.update(f"I{row_index}", [["Đã hủy ca"]], value_input_option="RAW")
+
+            await update.message.reply_text(
+                f"✅ Đã hủy ca:\n"
+                f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
+            )
+            return
+
+    await update.message.reply_text(
+        f"⚠️ Không tìm thấy ca cần hủy:\n"
+        f"{staff} - {day_names[day]} - Ca {shift_names[shift]}"
+    )
+async def tonggio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    totals = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+        print("TONGGIO:", staff, start_time, end_time)
+
+        if not staff or not start_time or not end_time:
+            continue
+
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+            hours = (end_dt - start_dt).seconds / 3600
+        except Exception:
+            continue
+
+        totals[staff] = totals.get(staff, 0) + hours
+
+    if not totals:
+        await update.message.reply_text(f"📊 Chưa có dữ liệu giờ làm tuần {week_key}.")
+        return
+
+    lines = [f"📊 TỔNG GIỜ DỰ KIẾN TUẦN {week_key}", ""]
+
+    for staff, hours in sorted(totals.items()):
+        lines.append(f"- {staff}: {hours:g} giờ")
+
+    await update.message.reply_text("\n".join(lines))
+async def thieuca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    config_sheet = get_worksheet("13_cau_hinh_ca")
+    lich_sheet = get_worksheet("12_lich_tuan")
+
+    if not config_sheet or not lich_sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet xếp ca.")
+        return
+
+    configs = config_sheet.get_all_records()
+    records = lich_sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    scheduled = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+
+        if not day or not shift or not staff:
+            continue
+
+        key = f"{day}|{shift}"
+        scheduled[key] = scheduled.get(key, 0) + 1
+
+    missing_lines = []
+
+    for row in configs:
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().lower()
+        if status != "active":
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        need_text = str(row.get("Số người cần", row.get("Số người cần ", "0"))).strip()
+
+        try:
+            need = int(float(need_text))
+        except Exception:
+            need = 0
+
+        key = f"{day}|{shift}"
+        current = scheduled.get(key, 0)
+
+        if current < need:
+            missing_lines.append(
+                f"- {day} Ca {shift}: cần {need}, đã xếp {current}, thiếu {need - current}"
+            )
+
+    if not missing_lines:
+        await update.message.reply_text(f"✅ Tuần {week_key} đã đủ người theo cấu hình ca.")
+        return
+
+    lines = [f"⚠️ CẢNH BÁO THIẾU CA TUẦN {week_key}", ""]
+    lines.extend(missing_lines)
+
+    await update.message.reply_text("\n".join(lines)) 
+async def canhan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
+
+    if len(args) < 1:
+        await update.message.reply_text(
+            "Cách dùng: /canhan <tên>\n"
+            "Ví dụ: /canhan Huy"
+        )
+        return
+
+    staff_query = " ".join(args).strip().lower()
+
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    day_order = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    shift_order = ["Sáng", "Tối"]
+
+    items = []
+    total_hours = 0
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        if staff.lower() != staff_query:
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+            hours = (end_dt - start_dt).seconds / 3600
+        except Exception:
+            hours = 0
+
+        total_hours += hours
+
+        items.append({
+            "day": day,
+            "shift": shift,
+            "start": start_time,
+            "end": end_time,
+            "hours": hours,
+            "staff": staff,
+        })
+
+    if not items:
+        await update.message.reply_text(f"📅 Chưa có lịch của {staff_query.title()} tuần {week_key}.")
+        return
+
+    lines = [f"📅 LỊCH CÁ NHÂN TUẦN {week_key}", f"Nhân viên: {items[0]['staff']}", ""]
+
+    for day in day_order:
+        day_items = [x for x in items if x["day"] == day]
+        if not day_items:
+            continue
+
+        lines.append(f"{day}:")
+        for shift in shift_order:
+            for item in day_items:
+                if item["shift"] == shift:
+                    lines.append(f"- Ca {shift}: {item['start']}-{item['end']} ({item['hours']:g} giờ)")
+        lines.append("")
+
+    lines.append(f"📊 Tổng giờ dự kiến: {total_hours:g} giờ")
+
+    await update.message.reply_text("\n".join(lines))
+async def canhdong_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    leaders = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+
+        if not staff or not start_time or not end_time:
+            continue
+
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+            hours = (end_dt - start_dt).seconds / 3600
+        except Exception:
+            continue
+
+        leaders[staff] = leaders.get(staff, 0) + hours
+
+    if not leaders:
+        await update.message.reply_text(f"📊 Chưa có dữ liệu cân đồng tuần {week_key}.")
+        return
+
+    sorted_staff = sorted(leaders.items(), key=lambda x: x[1], reverse=True)
+
+    top_name, top_hours = sorted_staff[0]
+
+    lines = [
+        f"⚖️ CÂN ĐỒNG GIỜ LÀM TUẦN {week_key}",
+        "",
+        f"🏆 Đang cao nhất: {top_name} - {top_hours:g} giờ",
+        "",
+        "📋 Tổng giờ hiện tại:"
+    ]
+
+    for staff, hours in sorted_staff:
+        lines.append(f"- {staff}: {hours:g} giờ")
+
+    await update.message.reply_text("\n".join(lines))
+async def nhanvien_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("00_Nhan_Vien")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 00_Nhan_Vien.")
+        return
+
+    records = sheet.get_all_records()
+
+    names = []
+
+    for row in records:
+        name = str(row.get("Tên nhân viên", row.get("Tên nhân viên ", ""))).strip()
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().lower()
+
+        if not name:
+            continue
+
+        if status and status != "active":
+            continue
+
+        names.append(name)
+
+    if not names:
+        await update.message.reply_text("👥 Chưa có nhân viên active.")
+        return
+
+    lines = ["👥 DANH SÁCH NHÂN VIÊN ACTIVE", ""]
+
+    for idx, name in enumerate(names, start=1):
+        lines.append(f"{idx}. {name}")
+
+    await update.message.reply_text("\n".join(lines))                   
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     shifts = DATA.get("shifts", {}).get(chat_id, {})
@@ -3383,6 +4027,15 @@ def main() -> None:
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("ranh", ranh_cmd))
+    app.add_handler(CommandHandler("checkranh", checkranh_cmd))
+    app.add_handler(CommandHandler("xepca", xepca_cmd))
+    app.add_handler(CommandHandler("lich", lich_cmd))
+    app.add_handler(CommandHandler("xoaca", xoaca_cmd))
+    app.add_handler(CommandHandler("tonggio", tonggio_cmd))
+    app.add_handler(CommandHandler("thieuca", thieuca_cmd))
+    app.add_handler(CommandHandler("canhan", canhan_cmd))
+    app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
+    app.add_handler(CommandHandler("canhdong", canhdong_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
