@@ -1436,6 +1436,38 @@ async def canhan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     lines.append(f"📊 Tổng giờ dự kiến: {total_hours:g} giờ")
 
+    await update.message.reply_text("\n".join(lines))
+async def nhanvien_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("00_Nhan_Vien")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 00_Nhan_Vien.")
+        return
+
+    records = sheet.get_all_records()
+
+    names = []
+
+    for row in records:
+        name = str(row.get("Tên nhân viên", row.get("Tên nhân viên ", ""))).strip()
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().lower()
+
+        if not name:
+            continue
+
+        if status and status != "active":
+            continue
+
+        names.append(name)
+
+    if not names:
+        await update.message.reply_text("👥 Chưa có nhân viên active.")
+        return
+
+    lines = ["👥 DANH SÁCH NHÂN VIÊN ACTIVE", ""]
+
+    for idx, name in enumerate(names, start=1):
+        lines.append(f"{idx}. {name}")
+
     await update.message.reply_text("\n".join(lines))                   
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
@@ -3944,6 +3976,7 @@ def main() -> None:
     app.add_handler(CommandHandler("tonggio", tonggio_cmd))
     app.add_handler(CommandHandler("thieuca", thieuca_cmd))
     app.add_handler(CommandHandler("canhan", canhan_cmd))
+    app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
