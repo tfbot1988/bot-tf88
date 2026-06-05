@@ -1284,6 +1284,73 @@ async def tonggio_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     for staff, hours in sorted(totals.items()):
         lines.append(f"- {staff}: {hours:g} giờ")
 
+    await update.message.reply_text("\n".join(lines))
+async def thieuca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    config_sheet = get_worksheet("13_cau_hinh_ca")
+    lich_sheet = get_worksheet("12_lich_tuan")
+
+    if not config_sheet or not lich_sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet xếp ca.")
+        return
+
+    configs = config_sheet.get_all_records()
+    records = lich_sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    scheduled = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+
+        if not day or not shift or not staff:
+            continue
+
+        key = f"{day}|{shift}"
+        scheduled[key] = scheduled.get(key, 0) + 1
+
+    missing_lines = []
+
+    for row in configs:
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().lower()
+        if status != "active":
+            continue
+
+        day = str(row.get("Thứ", row.get("Thứ ", ""))).strip()
+        shift = str(row.get("Ca", row.get("Ca ", ""))).strip()
+        need_text = str(row.get("Số người cần", row.get("Số người cần ", "0"))).strip()
+
+        try:
+            need = int(float(need_text))
+        except Exception:
+            need = 0
+
+        key = f"{day}|{shift}"
+        current = scheduled.get(key, 0)
+
+        if current < need:
+            missing_lines.append(
+                f"- {day} Ca {shift}: cần {need}, đã xếp {current}, thiếu {need - current}"
+            )
+
+    if not missing_lines:
+        await update.message.reply_text(f"✅ Tuần {week_key} đã đủ người theo cấu hình ca.")
+        return
+
+    lines = [f"⚠️ CẢNH BÁO THIẾU CA TUẦN {week_key}", ""]
+    lines.extend(missing_lines)
+
     await update.message.reply_text("\n".join(lines))                    
 async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
@@ -3790,6 +3857,7 @@ def main() -> None:
     app.add_handler(CommandHandler("lich", lich_cmd))
     app.add_handler(CommandHandler("xoaca", xoaca_cmd))
     app.add_handler(CommandHandler("tonggio", tonggio_cmd))
+    app.add_handler(CommandHandler("thieuca", thieuca_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
