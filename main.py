@@ -1437,6 +1437,64 @@ async def canhan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     lines.append(f"📊 Tổng giờ dự kiến: {total_hours:g} giờ")
 
     await update.message.reply_text("\n".join(lines))
+async def canhdong_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("12_lich_tuan")
+    if not sheet:
+        await update.message.reply_text("❌ Không kết nối được Google Sheet 12_lich_tuan.")
+        return
+
+    records = sheet.get_all_records()
+
+    now_dt = datetime.now(TZ)
+    week_key = now_dt.strftime("%Y-W%U")
+
+    leaders = {}
+
+    for row in records:
+        row_week = str(row.get("Tuần", row.get("Tuần ", ""))).strip()
+        if row_week != week_key:
+            continue
+
+        status = str(row.get("Trạng thái", row.get("Trạng thái ", ""))).strip().upper()
+        if status == "CANCELLED":
+            continue
+
+        staff = str(row.get("Nhân viên", row.get("Nhân viên ", ""))).strip()
+        start_time = str(row.get("Giờ bắt đầu", row.get("Giờ bắt đầu ", ""))).strip()
+        end_time = str(row.get("Giờ kết thúc", row.get("Giờ kết thúc ", row.get("Giờ kế thúc", "")))).strip()
+
+        if not staff or not start_time or not end_time:
+            continue
+
+        try:
+            start_dt = datetime.strptime(start_time, "%H:%M")
+            end_dt = datetime.strptime(end_time, "%H:%M")
+            hours = (end_dt - start_dt).seconds / 3600
+        except Exception:
+            continue
+
+        leaders[staff] = leaders.get(staff, 0) + hours
+
+    if not leaders:
+        await update.message.reply_text(f"📊 Chưa có dữ liệu cân đồng tuần {week_key}.")
+        return
+
+    sorted_staff = sorted(leaders.items(), key=lambda x: x[1], reverse=True)
+
+    top_name, top_hours = sorted_staff[0]
+
+    lines = [
+        f"⚖️ CÂN ĐỒNG GIỜ LÀM TUẦN {week_key}",
+        "",
+        f"🏆 Đang cao nhất: {top_name} - {top_hours:g} giờ",
+        "",
+        "📋 Tổng giờ hiện tại:"
+    ]
+
+    for staff, hours in sorted_staff:
+        lines.append(f"- {staff}: {hours:g} giờ")
+
+    await update.message.reply_text("\n".join(lines))
 async def nhanvien_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sheet = get_worksheet("00_Nhan_Vien")
     if not sheet:
@@ -3977,6 +4035,7 @@ def main() -> None:
     app.add_handler(CommandHandler("thieuca", thieuca_cmd))
     app.add_handler(CommandHandler("canhan", canhan_cmd))
     app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
+    app.add_handler(CommandHandler("canhdong", canhdong_cmd))
     app.add_handler(CommandHandler("clearshift", clearshift_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_done))
     schedule_all(app)
