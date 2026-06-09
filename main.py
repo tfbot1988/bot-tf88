@@ -1495,6 +1495,32 @@ async def canhdong_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         lines.append(f"- {staff}: {hours:g} giờ")
 
     await update.message.reply_text("\n".join(lines))
+async def chotlich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    sheet = get_worksheet("14_chot_lich")
+
+    if not sheet:
+        await update.message.reply_text(
+            "❌ Không kết nối được sheet 14_chot_lich."
+        )
+        return
+
+    now_dt = datetime.now(TZ)
+
+    week_key = now_dt.strftime("%Y-W%U")
+
+    user_name = update.effective_user.first_name
+
+    sheet.append_row([
+        week_key,
+        "CLOSED",
+        user_name,
+        now_dt.strftime("%Y-%m-%d %H:%M")
+    ])
+
+    await update.message.reply_text(
+        f"✅ ĐÃ CHỐT LỊCH TUẦN {week_key}\n\n"
+        "Mọi thay đổi lịch phải được Mr.Win phê duyệt."
+    )
 async def nhanvien_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sheet = get_worksheet("00_Nhan_Vien")
     if not sheet:
@@ -4033,6 +4059,7 @@ def main() -> None:
     app.add_handler(CommandHandler("xoaca", xoaca_cmd))
     app.add_handler(CommandHandler("tonggio", tonggio_cmd))
     app.add_handler(CommandHandler("thieuca", thieuca_cmd))
+    app.add_handler(CommandHandler("chotlich", chotlich_cmd))
     app.add_handler(CommandHandler("canhan", canhan_cmd))
     app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
     app.add_handler(CommandHandler("canhdong", canhdong_cmd))
