@@ -1495,6 +1495,93 @@ async def canhdong_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         lines.append(f"- {staff}: {hours:g} giờ")
 
     await update.message.reply_text("\n".join(lines))
+async def doica_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        args = context.args
+
+        if len(args) < 4:
+            await update.message.reply_text(
+                "Cú pháp:\n/doica Ngày Ca Người_đổi Người_nhận"
+            )
+            return
+
+        ngay = args[0]
+        ca = args[1]
+        nguoi_doi = args[2]
+        nguoi_nhan = args[3]
+
+        sheet = get_worksheet("15_doi_ca")
+
+        records = sheet.get_all_records()
+
+        new_id = len(records) + 1
+
+        sheet.append_row([
+            new_id,
+            ngay,
+            ca,
+            nguoi_doi,
+            nguoi_nhan,
+            "PENDING",
+            "",
+            datetime.now(TZ).strftime("%Y-%m-%d %H:%M")
+        ])
+
+        await update.message.reply_text(
+            f"🔄 Yêu cầu đổi ca #{new_id}\n\n"
+            f"📅 {ngay}\n"
+            f"🕒 {ca}\n"
+            f"👤 {nguoi_doi} → {nguoi_nhan}\n\n"
+            f"⏳ Chờ Mr.Win duyệt"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ {e}")
+async def duyetca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    try:
+        args = context.args
+
+        if len(args) < 1:
+            await update.message.reply_text(
+                "Cú pháp:\n/duyetca ID"
+            )
+            return
+
+        request_id = int(args[0])
+
+        sheet = get_worksheet("15_doi_ca")
+
+        records = sheet.get_all_records()
+
+        found = False
+
+        for idx, row in enumerate(records, start=2):
+
+            if int(row["ID"]) == request_id:
+
+                sheet.update_cell(idx, 6, "APPROVED")
+                sheet.update_cell(
+                    idx,
+                    7,
+                    update.effective_user.first_name
+                )
+
+                found = True
+                break
+
+        if not found:
+            await update.message.reply_text(
+                "❌ Không tìm thấy yêu cầu."
+            )
+            return
+
+        await update.message.reply_text(
+            f"✅ Đã duyệt đổi ca #{request_id}"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ {e}")
 async def chotlich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sheet = get_worksheet("14_chot_lich")
 
@@ -4059,6 +4146,8 @@ def main() -> None:
     app.add_handler(CommandHandler("xoaca", xoaca_cmd))
     app.add_handler(CommandHandler("tonggio", tonggio_cmd))
     app.add_handler(CommandHandler("thieuca", thieuca_cmd))
+    app.add_handler(CommandHandler("doica", doica_cmd))
+    app.add_handler(CommandHandler("duyetca", duyetca_cmd))
     app.add_handler(CommandHandler("chotlich", chotlich_cmd))
     app.add_handler(CommandHandler("canhan", canhan_cmd))
     app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
