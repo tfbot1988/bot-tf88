@@ -1582,6 +1582,55 @@ async def duyetca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         await update.message.reply_text(f"❌ {e}")
+async def scanthieuca_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    sheet = get_worksheet("12_lich_tuan")
+
+    if not sheet:
+        await update.message.reply_text(
+            "❌ Không kết nối được sheet 12_lich_tuan."
+        )
+        return
+
+    rows = sheet.get_all_records()
+
+    missing = []
+
+    for row in rows:
+
+        ngay = str(row.get("Ngày", "")).strip()
+        ca = str(row.get("Ca", "")).strip()
+        nv = str(row.get("Nhân viên", "")).strip()
+
+        if not nv:
+            missing.append((ngay, ca))
+
+    if not missing:
+
+        await update.message.reply_text(
+            "✅ Không phát hiện ca thiếu."
+        )
+        return
+
+    report = ["⚠️ CẢNH BÁO THIẾU CA\n"]
+
+    warning_sheet = get_worksheet("16_thieu_ca")
+
+    for ngay, ca in missing:
+
+        report.append(f"📅 {ngay} | {ca}")
+
+        if warning_sheet:
+            warning_sheet.append_row([
+                ngay,
+                ca,
+                "MISSING",
+                datetime.now(TZ).strftime("%Y-%m-%d %H:%M")
+            ])
+
+    await update.message.reply_text(
+        "\n".join(report)
+    )
 async def chotlich_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sheet = get_worksheet("14_chot_lich")
 
@@ -4148,6 +4197,7 @@ def main() -> None:
     app.add_handler(CommandHandler("thieuca", thieuca_cmd))
     app.add_handler(CommandHandler("doica", doica_cmd))
     app.add_handler(CommandHandler("duyetca", duyetca_cmd))
+    app.add_handler(CommandHandler("scanthieuca", scanthieuca_cmd))
     app.add_handler(CommandHandler("chotlich", chotlich_cmd))
     app.add_handler(CommandHandler("canhan", canhan_cmd))
     app.add_handler(CommandHandler("nhanvien", nhanvien_cmd))
