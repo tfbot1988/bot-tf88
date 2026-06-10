@@ -4002,6 +4002,7 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         records = ws.get_all_records()
+        print(records)
 
         if not records:
             await update.message.reply_text("📦 Kho hiện chưa có dữ liệu.")
