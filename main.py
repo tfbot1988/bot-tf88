@@ -3995,15 +3995,39 @@ async def removebirthday_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"- {removed['text']}"
     )
 async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📦 TF KHO & NHẬP HÀNG\n\n"
-        "Chức năng kho hiện đang ở giai đoạn ghi nhận thủ công.\n\n"
-        "Các lệnh đang dùng:\n\n"
-        "📥 /nhaphang - Gửi mẫu nhập hàng\n"
-        "⚠️ /thieuhang - Gửi mẫu báo thiếu hàng\n"
-        "📋 /kiemkho - Gửi mẫu kiểm kho\n\n"
-        "Lưu ý: Nhân viên điền đúng mẫu để Mr.Happy và Mr.Win dễ kiểm tra."
-    )
+    try:
+        ws = get_worksheet("07_Quan_Ly_Kho")
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 07_Quan_Ly_Kho.")
+            return
+
+        records = ws.get_all_records()
+
+        if not records:
+            await update.message.reply_text("📦 Kho hiện chưa có dữ liệu.")
+            return
+
+        lines = ["📦 TỒN KHO TF\n"]
+
+        for row in records:
+            ten_hang = row.get("Tên hàng", "")
+            ton_kho = row.get("Tồn kho", "")
+            don_vi = row.get("Đơn vị", "")
+            ton_toi_thieu = row.get("Tồn tối thiểu", "")
+            trang_thai = row.get("Trạng thái", "")
+
+            if not ten_hang:
+                continue
+
+            lines.append(
+                f"• {ten_hang}: {ton_kho} {don_vi}\n"
+                f"  Tối thiểu: {ton_toi_thieu} | Trạng thái: {trang_thai}"
+            )
+
+        await update.message.reply_text("\n\n".join(lines))
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc tồn kho: {e}")
 
 async def khohelp_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
