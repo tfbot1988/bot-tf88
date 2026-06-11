@@ -4003,7 +4003,7 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         records = ws.get_all_records()
         records = [
-            {str(k).strip(): v for k, v in row.items()}
+            {" ".join(str(k).split()): v for k, v in row.items()}
             for row in records
         ]
         print(records)
