@@ -4023,7 +4023,7 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             don_vi = row.get("Đơn vị", "")
             ton_toi_thieu = row.get("Tồn tối thiểu", "")
             trang_thai = row.get("Trạng thái", "")
-
+            ten_hang = str(ten_hang).strip()
             if not ten_hang:
                 continue
 
