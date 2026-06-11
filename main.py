@@ -4004,9 +4004,7 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         records = ws.get_all_records()
         records = [
             {
-                " ".join(
-                    str(k).replace("\n", " ").split()
-                ): v
+                str(k).replace("\n", "").strip(): v
                 for k, v in row.items()
             }
             for row in records
