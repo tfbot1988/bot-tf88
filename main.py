@@ -4026,12 +4026,12 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ten_hang = str(ten_hang).strip()
             if not ten_hang:
                 continue
-            icon = "⚠️" if str(trang_thai).strip() == "Sắp hết" else "✅"
+            icon = "🔴" if str(trang_thai).strip() == "Sắp hết" else "🟢"
             lines.append(
                 f"{icon} {ten_hang}\n"
-                f"   📦 {ton_kho} {don_vi}\n"
-                f"   📉 Mức tối thiểu: {ton_toi_thieu}\n"
-                f"   📋 {trang_thai}"
+                f"📦 Tồn kho: {ton_kho} {don_vi}\n"
+                f"📉 Tối thiểu: {ton_toi_thieu}\n"
+                f"📋 Trạng thái: {trang_thai}"
             )
         await update.message.reply_text("\n\n".join(lines))
 
