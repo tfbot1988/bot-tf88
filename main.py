@@ -4002,6 +4002,10 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         records = ws.get_all_records()
+        records = [
+            {str(k).strip(): v for k, v in row.items()}
+            for row in records
+        ]
         print(records)
 
         if not records:
