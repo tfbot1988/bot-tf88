@@ -4029,9 +4029,9 @@ async def tonkho_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             icon = "⚠️" if str(trang_thai).strip() == "Sắp hết" else "✅"
             lines.append(
                 f"{icon} {ten_hang}\n"
-                f"├ 📦 Tồn kho: {ton_kho} {don_vi}\n"
-                f"├ 📉 Tối thiểu: {ton_toi_thieu}\n"
-                f"└ 📋 Trạng thái: {trang_thai}"
+                f"   📦 {ton_kho} {don_vi}\n"
+                f"   📉 Mức tối thiểu: {ton_toi_thieu}\n"
+                f"   📋 {trang_thai}"
             )
         await update.message.reply_text("\n\n".join(lines))
 
