@@ -406,7 +406,52 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     chat_id = str(update.effective_chat.id)
     today_key = datetime.now(TZ).strftime("%Y-%m-%d")
     now = datetime.now(TZ).strftime("%H:%M")
+    if text_upper.startswith("NHẬP HÀNG"):
+        ws = get_worksheet("08_Nhap_Hang")
 
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 08_Nhap_Hang.")
+            return
+
+        def get_value(label):
+            for line in text.splitlines():
+                if line.lower().startswith(label.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        mat_hang = get_value("Mặt hàng")
+        so_luong = get_value("Số lượng")
+        don_gia = get_value("Đơn giá")
+        tong_tien = get_value("Tổng tiền")
+        nha_cung_cap = get_value("Nhà cung cấp")
+        han_su_dung = get_value("Hạn sử dụng")
+        nguoi_duyet = get_value("Người duyệt")
+        ghi_chu = get_value("Ghi chú")
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong,
+                don_gia,
+                tong_tien,
+                nha_cung_cap,
+                han_su_dung,
+                nguoi_duyet,
+                ghi_chu,
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
+        await update.message.reply_text(
+            f"✅ Đã ghi nhận nhập hàng\n\n"
+            f"📦 Mặt hàng: {mat_hang}\n"
+            f"📥 Số lượng: {so_luong}\n"
+            f"💰 Tổng tiền: {tong_tien}\n"
+            f"👤 Người duyệt: {nguoi_duyet}"
+        )
+        return
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_name = staff_name.strip().title()
