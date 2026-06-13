@@ -455,6 +455,10 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
                 ton_cu = int(row.get("Tồn kho", 0))
                 ton_moi = ton_cu + int(so_luong)
+                print("TEN_HANG =", ten_hang)
+                print("TON_CU =", ton_cu)
+                print("SO_LUONG =", so_luong)
+                print("TON_MOI =", ton_moi)
 
                 ton_toi_thieu = int(row.get("Tồn tối thiểu", 0))
 
