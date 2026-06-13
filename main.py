@@ -452,6 +452,8 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         for idx, row in enumerate(rows[1:], start=2):
             ten_hang = row[0].strip().lower() if len(row) > 0 else ""
+            print("SHEET =", repr(ten_hang))
+            print("INPUT =", repr(mat_hang.strip().lower()))
 
             if ten_hang == mat_hang.strip().lower():
                 found = True
