@@ -452,6 +452,48 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"👤 Người duyệt: {nguoi_duyet}"
         )
         return
+    if text_upper.startswith("THIẾU HÀNG"):
+        ws = get_worksheet("09_Bao_Thieu")
+
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 09_Bao_Thieu.")
+            return
+
+        def get_value(label):
+            for line in text.splitlines():
+                if line.lower().startswith(label.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        mat_hang = get_value("Mặt hàng")
+        so_luong_con = get_value("Số lượng còn")
+        muc_do = get_value("Mức độ")
+        du_kien = get_value("Dự kiến đủ dùng đến")
+        de_xuat = get_value("Đề xuất nhập thêm")
+        ghi_chu = get_value("Ghi chú")
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong_con,
+                muc_do,
+                du_kien,
+                de_xuat,
+                ghi_chu
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
+        await update.message.reply_text(
+            f"⚠️ Đã ghi nhận báo thiếu hàng\n\n"
+            f"📦 Mặt hàng: {mat_hang}\n"
+            f"📉 Còn lại: {so_luong_con}\n"
+            f"🚨 Mức độ: {muc_do}\n"
+            f"➕ Đề xuất nhập: {de_xuat}"
+        )
+        return
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_name = staff_name.strip().title()
