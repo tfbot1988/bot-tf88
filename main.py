@@ -494,6 +494,47 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"➕ Đề xuất nhập: {de_xuat}"
         )
         return
+    if text_upper.startswith("XUẤT KHO"):
+        ws = get_worksheet("11_Xuat_Kho")
+
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 11_Xuat_Kho.")
+            return
+
+        def get_value(label):
+            for line in text.splitlines():
+                if line.lower().startswith(label.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        mat_hang = get_value("Mặt hàng")
+        so_luong_xuat = get_value("Số lượng xuất")
+        ly_do = get_value("Lý do")
+        ca = get_value("Ca")
+        ghi_chu = get_value("Ghi chú")
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong_xuat,
+                ly_do,
+                ca,
+                ghi_chu
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
+        await update.message.reply_text(
+            f"📤 Đã ghi nhận xuất kho\n\n"
+            f"📦 Mặt hàng: {mat_hang}\n"
+            f"📉 Số lượng xuất: {so_luong_xuat}\n"
+            f"📋 Lý do: {ly_do}\n"
+            f"🕒 Ca: {ca}"
+        )
+
+        return
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
         staff_name = staff_name.strip().title()
