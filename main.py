@@ -448,11 +448,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if kho_ws:
         rows = kho_ws.get_all_values()
+        found = False
 
         for idx, row in enumerate(rows[1:], start=2):
             ten_hang = row[0].strip().lower() if len(row) > 0 else ""
 
             if ten_hang == mat_hang.strip().lower():
+                found = True
                 ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
                 ton_moi = ton_cu + int(so_luong)
 
@@ -467,6 +469,19 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 print("CAP NHAT KHO:", mat_hang, ton_cu, "+", so_luong, "=", ton_moi)
 
                 break
+            if not found:
+                kho_ws.append_row(
+                    [
+                        mat_hang,
+                        int(so_luong),
+                        "",
+                        0,
+                        "Đủ hàng",
+                    ],
+                    value_input_option="RAW",
+                    insert_data_option="INSERT_ROWS"
+                )
+                print("TAO MAT HANG MOI:", mat_hang, so_luong)
         await update.message.reply_text(
             f"✅ Đã ghi nhận nhập hàng\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
