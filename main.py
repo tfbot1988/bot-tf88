@@ -447,6 +447,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if kho_ws:
         records = kho_ws.get_all_records()
+        print(records)
 
         for idx, row in enumerate(records, start=2):
             ten_hang = str(row.get("Tên hàng", "")).strip().lower()
