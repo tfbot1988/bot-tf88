@@ -443,7 +443,30 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
+        kho_ws = get_worksheet("07_Quan_Ly_Kho")
 
+    if kho_ws:
+        records = kho_ws.get_all_records()
+
+        for idx, row in enumerate(records, start=2):
+            ten_hang = str(row.get("Tên hàng", "")).strip().lower()
+
+            if ten_hang == mat_hang.strip().lower():
+
+                ton_cu = int(row.get("Tồn kho", 0))
+                ton_moi = ton_cu + int(so_luong)
+
+                ton_toi_thieu = int(row.get("Tồn tối thiểu", 0))
+
+                if ton_moi <= ton_toi_thieu:
+                    trang_thai = "Sắp hết"
+                else:
+                    trang_thai = "Đủ hàng"
+
+                kho_ws.update_cell(idx, 2, ton_moi)
+                kho_ws.update_cell(idx, 5, trang_thai)
+
+                break
         await update.message.reply_text(
             f"✅ Đã ghi nhận nhập hàng\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
