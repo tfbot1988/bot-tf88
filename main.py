@@ -445,31 +445,26 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         kho_ws = get_worksheet("07_Quan_Ly_Kho")
 
-    if kho_ws:
-        records = kho_ws.get_all_records()
-        print(records)
 
-        for idx, row in enumerate(records, start=2):
-            ten_hang = str(row.get("Tên hàng", "")).strip().lower()
+    if kho_ws:
+        rows = kho_ws.get_all_values()
+
+        for idx, row in enumerate(rows[1:], start=2):
+            ten_hang = row[0].strip().lower() if len(row) > 0 else ""
 
             if ten_hang == mat_hang.strip().lower():
-
-                ton_cu = int(row.get("Tồn kho", 0))
+                ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
                 ton_moi = ton_cu + int(so_luong)
-                print("TEN_HANG =", ten_hang)
-                print("TON_CU =", ton_cu)
-                print("SO_LUONG =", so_luong)
-                print("TON_MOI =", ton_moi)
 
-                ton_toi_thieu = int(row.get("Tồn tối thiểu", 0))
+                don_vi = row[2] if len(row) > 2 else ""
+                ton_toi_thieu = int(row[3]) if len(row) > 3 and row[3] else 0
 
-                if ton_moi <= ton_toi_thieu:
-                    trang_thai = "Sắp hết"
-                else:
-                    trang_thai = "Đủ hàng"
+                trang_thai = "Sắp hết" if ton_moi <= ton_toi_thieu else "Đủ hàng"
 
                 kho_ws.update_cell(idx, 2, ton_moi)
                 kho_ws.update_cell(idx, 5, trang_thai)
+
+                print("CAP NHAT KHO:", mat_hang, ton_cu, "+", so_luong, "=", ton_moi)
 
                 break
         await update.message.reply_text(
