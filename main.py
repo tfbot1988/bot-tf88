@@ -427,6 +427,11 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         han_su_dung = get_value("Hạn sử dụng")
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
+        if not tong_tien:
+            tong_tien = "Chưa nhập"
+
+        if not nguoi_duyet:
+            nguoi_duyet = "Chưa nhập"
 
         ws.append_row(
             [
