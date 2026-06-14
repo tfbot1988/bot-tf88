@@ -427,6 +427,11 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         han_su_dung = get_value("Hạn sử dụng")
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
+        if not tong_tien:
+            tong_tien = "Chưa nhập"
+
+        if not nguoi_duyet:
+            nguoi_duyet = "Chưa nhập"
 
         ws.append_row(
             [
@@ -443,7 +448,47 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
+        kho_ws = get_worksheet("07_Quan_Ly_Kho")
 
+
+    if kho_ws:
+        rows = kho_ws.get_all_values()
+        found = False
+
+        for idx, row in enumerate(rows[1:], start=2):
+            ten_hang = row[0].strip().lower() if len(row) > 0 else ""
+            print("SHEET =", repr(ten_hang))
+            print("INPUT =", repr(mat_hang.strip().lower()))
+
+            if ten_hang == mat_hang.strip().lower():
+                found = True
+                ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
+                ton_moi = ton_cu + int(so_luong)
+
+                don_vi = row[2] if len(row) > 2 else ""
+                ton_toi_thieu = int(row[3]) if len(row) > 3 and row[3] else 0
+
+                trang_thai = "Sắp hết" if ton_moi <= ton_toi_thieu else "Đủ hàng"
+
+                kho_ws.update_cell(idx, 2, ton_moi)
+                kho_ws.update_cell(idx, 5, trang_thai)
+
+                print("CAP NHAT KHO:", mat_hang, ton_cu, "+", so_luong, "=", ton_moi)
+
+                break
+        if not found:
+                kho_ws.append_row(
+                    [
+                        mat_hang,
+                        int(so_luong),
+                        "",
+                        0,
+                        "Đủ hàng",
+                    ],
+                    value_input_option="RAW",
+                    insert_data_option="INSERT_ROWS"
+                )
+                print("TAO MAT HANG MOI:", mat_hang, so_luong)
         await update.message.reply_text(
             f"✅ Đã ghi nhận nhập hàng\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
@@ -451,6 +496,89 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"💰 Tổng tiền: {tong_tien}\n"
             f"👤 Người duyệt: {nguoi_duyet}"
         )
+        return
+    if text_upper.startswith("THIẾU HÀNG"):
+        ws = get_worksheet("09_Bao_Thieu")
+
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 09_Bao_Thieu.")
+            return
+
+        def get_value(label):
+            for line in text.splitlines():
+                if line.lower().startswith(label.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        mat_hang = get_value("Mặt hàng")
+        so_luong_con = get_value("Số lượng còn")
+        muc_do = get_value("Mức độ")
+        du_kien = get_value("Dự kiến đủ dùng đến")
+        de_xuat = get_value("Đề xuất nhập thêm")
+        ghi_chu = get_value("Ghi chú")
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong_con,
+                muc_do,
+                du_kien,
+                de_xuat,
+                ghi_chu
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
+        await update.message.reply_text(
+            f"⚠️ Đã ghi nhận báo thiếu hàng\n\n"
+            f"📦 Mặt hàng: {mat_hang}\n"
+            f"📉 Còn lại: {so_luong_con}\n"
+            f"🚨 Mức độ: {muc_do}\n"
+            f"➕ Đề xuất nhập: {de_xuat}"
+        )
+        return
+    if text_upper.startswith("XUẤT KHO"):
+        ws = get_worksheet("11_Xuat_Kho")
+
+        if not ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 11_Xuat_Kho.")
+            return
+
+        def get_value(label):
+            for line in text.splitlines():
+                if line.lower().startswith(label.lower() + ":"):
+                    return line.split(":", 1)[1].strip()
+            return ""
+
+        mat_hang = get_value("Mặt hàng")
+        so_luong_xuat = get_value("Số lượng xuất")
+        ly_do = get_value("Lý do")
+        ca = get_value("Ca")
+        ghi_chu = get_value("Ghi chú")
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong_xuat,
+                ly_do,
+                ca,
+                ghi_chu
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
+        await update.message.reply_text(
+            f"📤 Đã ghi nhận xuất kho\n\n"
+            f"📦 Mặt hàng: {mat_hang}\n"
+            f"📉 Số lượng xuất: {so_luong_xuat}\n"
+            f"📋 Lý do: {ly_do}\n"
+            f"🕒 Ca: {ca}"
+        )
+
         return
     if text_upper.startswith("CHECKIN"):
         staff_name = text.split("-", 1)[1].strip() if "-" in text else text[7:].strip()
