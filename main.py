@@ -448,7 +448,11 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
-        kho_ws = get_worksheet("07_Quan_Ly_Kho")
+        kho_ws = None
+        try:
+            kho_ws = get_worksheet("07_Quan_Ly_Kho")
+        except Exception as e:
+            print("LOI MO SHEET KHO:", e)
 
 
     if kho_ws:
