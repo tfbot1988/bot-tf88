@@ -398,6 +398,7 @@ def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
 
     return False    
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    kho_ws = None
     if not update.message or not update.message.text:
         return
 
@@ -448,7 +449,11 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
-        kho_ws = get_worksheet("07_Quan_Ly_Kho")
+        kho_ws = None
+        try:
+            kho_ws = get_worksheet("07_Quan_Ly_Kho")
+        except Exception as e:
+            print("LOI MO SHEET KHO:", e)
 
 
     if kho_ws:
@@ -541,6 +546,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     if text_upper.startswith("XUẤT KHO"):
         ws = get_worksheet("11_Xuat_Kho")
+        kho_ws = get_worksheet("07_Quan_Ly_Kho")
 
         if not ws:
             await update.message.reply_text("❌ Không kết nối được sheet 11_Xuat_Kho.")
@@ -570,7 +576,44 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
+    if kho_ws:
+        rows = kho_ws.get_all_values()
+        found = False
 
+        for idx, row in enumerate(rows[1:], start=2):
+            ten_hang = row[0].strip().lower() if len(row) > 0 else ""
+            print("SHEET =", repr(ten_hang))
+            print("INPUT =", repr(mat_hang.strip().lower()))
+
+            if ten_hang == mat_hang.strip().lower():
+                found = True
+                ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
+                ton_moi = ton_cu - int(so_luong_xuat)
+
+                don_vi = row[2] if len(row) > 2 else ""
+                ton_toi_thieu = int(row[3]) if len(row) > 3 and row[3] else 0
+
+                trang_thai = "Sắp hết" if ton_moi <= ton_toi_thieu else "Đủ hàng"
+
+                kho_ws.update_cell(idx, 2, ton_moi)
+                kho_ws.update_cell(idx, 5, trang_thai)
+
+                print("XUAT KHO:", mat_hang, ton_cu, "-", so_luong_xuat, "=", ton_moi)
+
+                break
+        if not found:
+                kho_ws.append_row(
+                    [
+                        mat_hang,
+                        -int(so_luong_xuat),
+                        "",
+                        0,
+                        "Đủ hàng",
+                    ],
+                    value_input_option="RAW",
+                    insert_data_option="INSERT_ROWS"
+                )
+                print("TAO MAT HANG MOI:", mat_hang, so_luong)
         await update.message.reply_text(
             f"📤 Đã ghi nhận xuất kho\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
