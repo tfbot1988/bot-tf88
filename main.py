@@ -398,6 +398,7 @@ def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
 
     return False    
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    kho_ws = None
     if not update.message or not update.message.text:
         return
 
