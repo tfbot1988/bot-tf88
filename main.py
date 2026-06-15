@@ -541,6 +541,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     if text_upper.startswith("XUẤT KHO"):
         ws = get_worksheet("11_Xuat_Kho")
+        kho_ws = get_worksheet("07_Quan_Ly_Kho")
 
         if not ws:
             await update.message.reply_text("❌ Không kết nối được sheet 11_Xuat_Kho.")
