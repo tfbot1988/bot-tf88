@@ -3320,7 +3320,38 @@ async def salarytype_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Đã cập nhật loại lương cho {staff_name}:\n"
         f"{type_text}"
     )
+def sync_salary_to_sheet(staff_name, salary_type, hourly_rate="", fixed_salary=""):
+    try:
+        ws = get_worksheet("022_Cau_Hinh_Luong")
+        if not ws:
+            print("KHONG MO DUOC SHEET 022_Cau_Hinh_Luong")
+            return
 
+        rows = ws.get_all_values()
+        found = False
+
+        for idx, row in enumerate(rows[1:], start=2):
+            name = row[0].strip() if len(row) > 0 else ""
+            if name.lower() == staff_name.lower():
+                ws.update_cell(idx, 2, salary_type)
+                ws.update_cell(idx, 3, hourly_rate)
+                ws.update_cell(idx, 4, fixed_salary)
+                ws.update_cell(idx, 5, datetime.now(TZ).strftime("%d/%m/%Y"))
+                found = True
+                break
+
+        if not found:
+            ws.append_row([
+                staff_name,
+                salary_type,
+                hourly_rate,
+                fixed_salary,
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                "Cập nhật từ Telegram"
+            ])
+
+    except Exception as e:
+        print("LOI DONG BO LUONG SHEET:", e)
 async def sethourly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -3356,6 +3387,7 @@ async def sethourly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     DATA["salary"][chat_id][staff_name]["hourly_rate"] = hourly_rate
 
     save_data(DATA)
+    sync_salary_to_sheet(staff_name, "hourly", hourly_rate, "")
 
     await update.message.reply_text(
         f"✅ Đã cập nhật lương giờ cho {staff_name}:\n"
@@ -3388,6 +3420,7 @@ async def fixedsalary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     DATA["salary"][chat_id][staff_name]["fixed_salary"] = amount
     print(DATA["salary"])
     save_data(DATA)
+    sync_salary_to_sheet(staff_name, "fixed", "", amount)
 
     await update.message.reply_text(
         f"✅ Đã cập nhật lương cứng cho {staff_name}:\n"
@@ -3417,6 +3450,7 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     save_data(DATA)
+    
 
     await update.message.reply_text(
         f"🎉 Đã cộng thưởng cho {staff_name}: "
