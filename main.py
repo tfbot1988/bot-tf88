@@ -3352,6 +3352,46 @@ def sync_salary_to_sheet(staff_name, salary_type, hourly_rate="", fixed_salary="
 
     except Exception as e:
         print("LOI DONG BO LUONG SHEET:", e)
+def get_salary_config_from_sheet():
+    salary_config = {}
+
+    try:
+        ws = get_worksheet("022_Cau_Hinh_Luong")
+        if not ws:
+            print("KHONG MO DUOC SHEET 022_Cau_Hinh_Luong")
+            return salary_config
+
+        records = ws.get_all_records()
+
+        for row in records:
+            staff_name = str(row.get("Tên nhân viên", "")).strip()
+            if not staff_name:
+                continue
+
+            salary_type = str(row.get("Loại lương", "hourly")).strip().lower()
+            hourly_rate = row.get("Lương giờ", 30000)
+            fixed_salary = row.get("Lương cứng", 0)
+
+            try:
+                hourly_rate = int(str(hourly_rate).replace(".", "").replace(",", "").strip() or 30000)
+            except:
+                hourly_rate = 30000
+
+            try:
+                fixed_salary = int(str(fixed_salary).replace(".", "").replace(",", "").strip() or 0)
+            except:
+                fixed_salary = 0
+
+            salary_config[staff_name] = {
+                "type": salary_type,
+                "hourly_rate": hourly_rate,
+                "fixed_salary": fixed_salary,
+            }
+
+    except Exception as e:
+        print("LOI DOC CAU HINH LUONG SHEET:", e)
+
+    return salary_config
 async def sethourly_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
 
@@ -3599,7 +3639,7 @@ async def finelist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))       
 async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
-    salary_data = DATA.get("salary", {}).get(chat_id, {})
+    salary_data = get_salary_config_from_sheet()
 
     if not salary_data:
         await update.message.reply_text("Chưa có cấu hình lương.")
