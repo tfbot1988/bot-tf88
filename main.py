@@ -3583,9 +3583,9 @@ async def salarylist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines.append("- Loại lương: Lương cứng")
             lines.append(f"- Mức: {fixed_salary:,}đ/tháng".replace(",", "."))
         else:
+            hourly_rate = info.get("hourly_rate", 30000)
             lines.append("- Loại lương: Theo giờ")
-            lines.append("- Mức: 30.000đ/giờ")
-
+            lines.append(f"- Mức: {hourly_rate:,}đ/giờ".replace(",", "."))
         lines.append("")
 
     await update.message.reply_text("\n".join(lines))
@@ -3667,7 +3667,8 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             except Exception:
                 pass
-            salary = round((total_minutes / 60) * 30000)
+            hourly_rate = info.get("hourly_rate", 30000)
+            salary = round((total_minutes / 60) * hourly_rate)
             
 
         final_salary = salary + bonus - advance - fine
