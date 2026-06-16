@@ -3667,7 +3667,7 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     chat_id = str(update.effective_chat.id)
     now_dt = datetime.now(TZ)
 
-    salary_data = DATA.get("salary", {}).get(chat_id, {})
+    salary_data = get_salary_config_from_sheet()
 
     all_staff = set()
     try:
@@ -3682,9 +3682,8 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception:
         pass
 
-    for row in DATA.get("salary", {}).get(chat_id, {}):
+    for row in salary_data:
         all_staff.add(row)
-
     for row in DATA.get("bonus", {}).get(chat_id, {}):
         all_staff.add(row)
 
