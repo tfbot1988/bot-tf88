@@ -3942,7 +3942,20 @@ async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Số dòng: {len(export_rows)}"
     )
 
+async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
+    data = context.job.data
+    today = datetime.now(TZ)
 
+    if today.day != data["day"]:
+        return
+
+    await context.bot.send_message(
+        chat_id=data["chat_id"],
+        text=(
+            "🔔 NHẮC VIỆC HÀNG THÁNG\n\n"
+            f"{data['text']}"
+        )
+    )
 def schedule_monthly_item(app, chat_id: str, index: int, item: dict):
     hour, minute = map(int, item["time"].split(":"))
     remind_time = datetime.now(TZ).replace(
