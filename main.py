@@ -3370,6 +3370,47 @@ def sync_reward_to_sheet(staff_name, action_type, amount, note=""):
 
     except Exception as e:
         print("LOI GHI THUONG_UNG_PHAT:", e)
+def get_reward_data_from_sheet():
+    reward_data = {}
+
+    try:
+        ws = get_worksheet("023_Thuong_Ung_Phat")
+        if not ws:
+            print("KHONG MO DUOC SHEET 023_Thuong_Ung_Phat")
+            return reward_data
+
+        records = ws.get_all_records()
+
+        for row in records:
+            staff_name = str(row.get("Nhân viên", "")).strip()
+            action_type = str(row.get("Loại", "")).strip().lower()
+            amount = row.get("Số tiền", 0)
+
+            if not staff_name or not action_type:
+                continue
+
+            try:
+                amount = int(str(amount).replace(".", "").replace(",", "").strip() or 0)
+            except:
+                amount = 0
+
+            reward_data.setdefault(staff_name, {
+                "bonus": 0,
+                "advance": 0,
+                "fine": 0
+            })
+
+            if action_type in ["bonus", "thuong", "thưởng"]:
+                reward_data[staff_name]["bonus"] += amount
+            elif action_type in ["advance", "ung", "ứng"]:
+                reward_data[staff_name]["advance"] += amount
+            elif action_type in ["fine", "phat", "phạt"]:
+                reward_data[staff_name]["fine"] += amount
+
+    except Exception as e:
+        print("LOI DOC THUONG_UNG_PHAT SHEET:", e)
+
+    return reward_data
 def get_salary_config_from_sheet():
     salary_config = {}
 
@@ -3702,6 +3743,7 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     now_dt = datetime.now(TZ)
 
     salary_data = get_salary_config_from_sheet()
+    reward_data = get_reward_data_from_sheet()
 
     all_staff = set()
     try:
@@ -3718,13 +3760,7 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     for row in salary_data:
         all_staff.add(row)
-    for row in DATA.get("bonus", {}).get(chat_id, {}):
-        all_staff.add(row)
-
-    for row in DATA.get("advance", {}).get(chat_id, {}):
-        all_staff.add(row)
-
-    for row in DATA.get("fine", {}).get(chat_id, {}):
+    for row in reward_data:
         all_staff.add(row)
 
     lines = [f"📊 TỔNG KẾT LƯƠNG TF {now_dt.strftime('%m/%Y')}", ""]
@@ -3734,9 +3770,9 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         info = salary_data.get(staff_name, {})
         salary_type = info.get("type", "hourly")
 
-        bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
-        advance = DATA.get("advance", {}).get(chat_id, {}).get(staff_name, 0)
-        fine = DATA.get("fine", {}).get(chat_id, {}).get(staff_name, 0)
+        bonus = reward_data.get(staff_name, {}).get("bonus", 0)
+        advance = reward_data.get(staff_name, {}).get("advance", 0)
+        fine = reward_data.get(staff_name, {}).get("fine", 0)
 
         if salary_type == "fixed":
             salary = info.get("fixed_salary", 0)
