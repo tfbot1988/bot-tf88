@@ -3816,6 +3816,27 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
+def payroll_export_exists(month_text):
+    try:
+        ws = get_worksheet("02_Tinh_Luong")
+        if not ws:
+            return False
+
+        records = ws.get_all_records()
+
+        for row in records:
+            date_text = str(row.get("Ngày", "")).strip()
+            note_text = str(row.get("Ghi chú", "")).strip()
+
+            if len(date_text) >= 10:
+                if date_text[3:10] == month_text and note_text == "Chốt lương tháng":
+                    return True
+
+        return False
+
+    except Exception as e:
+        print("LOI KIEM TRA TRUNG XUAT LUONG:", e)
+        return False
 def export_payroll_to_sheet(rows):
     try:
         ws = get_worksheet("02_Tinh_Luong")
@@ -3832,6 +3853,14 @@ def export_payroll_to_sheet(rows):
         return False
 async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now_dt = datetime.now(TZ)
+    month_text = now_dt.strftime("%m/%Y")
+
+    if payroll_export_exists(month_text):
+        await update.message.reply_text(
+            f"⚠️ Lương tháng {month_text} đã được xuất trước đó.\n"
+            "Không thể xuất lại để tránh trùng dữ liệu."
+        )
+        return
 
     salary_data = get_salary_config_from_sheet()
     reward_data = get_reward_data_from_sheet()
