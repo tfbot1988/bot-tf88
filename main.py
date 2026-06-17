@@ -3816,21 +3816,130 @@ async def payrollsummary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     lines.append(f"🏦 Tổng thực chi: {total_all:,}đ".replace(",", "."))
 
     await update.message.reply_text("\n".join(lines))
-async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await payrollsummary_cmd(update, context)
-async def monthly_reminder_job(context: ContextTypes.DEFAULT_TYPE):
-    data = context.job.data
-    today = datetime.now(TZ)
+def export_payroll_to_sheet(rows):
+    try:
+        ws = get_worksheet("02_Tinh_Luong")
+        if not ws:
+            print("KHONG MO DUOC SHEET 02_Tinh_Luong")
+            return False
 
-    if today.day != data["day"]:
+        ws.append_rows(rows)
+
+        return True
+
+    except Exception as e:
+        print("LOI GHI 02_Tinh_Luong:", e)
+        return False
+async def payrollexport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    now_dt = datetime.now(TZ)
+
+    salary_data = get_salary_config_from_sheet()
+    reward_data = get_reward_data_from_sheet()
+
+    export_rows = []
+
+    all_staff = set()
+
+    try:
+        ws = get_worksheet("01_Cham_Cong")
+        records = ws.get_all_records()
+
+        for row in records:
+            staff = str(row.get("Nhân viên", "")).strip()
+            if staff:
+                all_staff.add(staff)
+    except Exception:
+        pass
+
+    for row in salary_data:
+        all_staff.add(row)
+
+    for row in reward_data:
+        all_staff.add(row)
+
+    for staff_name in all_staff:
+        info = salary_data.get(staff_name, {})
+        salary_type = info.get("type", "hourly")
+
+        reward = reward_data.get(staff_name, {})
+        bonus = reward.get("bonus", 0)
+        advance = reward.get("advance", 0)
+        fine = reward.get("fine", 0)
+
+        total_minutes = 0
+
+        if salary_type == "fixed":
+            salary = info.get("fixed_salary", 0)
+            total_time_text = "Lương cứng"
+        else:
+            try:
+                ws = get_worksheet("01_Cham_Cong")
+                records = ws.get_all_records()
+
+                for row in records:
+                    date_text = str(row.get("Ngày", "")).strip()
+                    name_text = str(row.get("Nhân viên", "")).strip()
+                    duration_text = str(row.get("Thời lượng", "")).strip()
+
+                    if name_text != staff_name:
+                        continue
+
+                    if not date_text.endswith(now_dt.strftime("%Y")) or date_text[3:5] != now_dt.strftime("%m"):
+                        continue
+
+                    hours = 0
+                    mins = 0
+
+                    if "giờ" in duration_text:
+                        parts = duration_text.split("giờ")
+                        hours = int(parts[0].strip())
+                        if len(parts) > 1 and "phút" in parts[1]:
+                            mins = int(parts[1].replace("phút", "").strip())
+                    elif "phút" in duration_text:
+                        mins = int(duration_text.replace("phút", "").strip())
+
+                    total_minutes += hours * 60 + mins
+
+            except Exception:
+                pass
+
+            hourly_rate = info.get("hourly_rate", 30000)
+            salary = round((total_minutes / 60) * hourly_rate)
+
+            hours = total_minutes // 60
+            mins = total_minutes % 60
+            total_time_text = f"{hours} giờ {mins} phút"
+
+        final_salary = salary + bonus - advance - fine
+
+        if final_salary == 0:
+            continue
+
+        export_rows.append([
+            now_dt.strftime("%d/%m/%Y"),
+            staff_name,
+            total_time_text,
+            salary,
+            bonus,
+            advance,
+            fine,
+            final_salary,
+            "Chốt lương tháng"
+        ])
+
+    if not export_rows:
+        await update.message.reply_text("❌ Không có dữ liệu lương để xuất.")
         return
 
-    await context.bot.send_message(
-        chat_id=data["chat_id"],
-        text=(
-            "🔔 NHẮC VIỆC HẰNG THÁNG\n\n"
-            f"{data['text']}"
-        )
+    ok = export_payroll_to_sheet(export_rows)
+
+    if not ok:
+        await update.message.reply_text("❌ Lỗi ghi vào sheet 02_Tinh_Luong.")
+        return
+
+    await update.message.reply_text(
+        f"✅ Đã xuất bảng lương tháng {now_dt.strftime('%m/%Y')} vào sheet 02_Tinh_Luong.\n"
+        f"Số dòng: {len(export_rows)}"
     )
 
 
