@@ -3543,12 +3543,7 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     chat_id = str(update.effective_chat.id)
 
-    DATA.setdefault("bonus", {}).setdefault(chat_id, {})
-    DATA["bonus"][chat_id][staff_name] = (
-        DATA["bonus"][chat_id].get(staff_name, 0) + amount
-    )
-
-    save_data(DATA)
+    
     sync_reward_to_sheet(
         staff_name,
         "bonus",
@@ -3573,7 +3568,7 @@ async def bonusremove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Số tiền không hợp lệ.")
         return
 
-    chat_id = str(update.effective_chat.id)
+
 
     current_bonus = DATA.get("bonus", {}).get(chat_id, {}).get(staff_name, 0)
     new_bonus = max(0, current_bonus - amount)
@@ -3600,14 +3595,7 @@ async def advance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Số tiền không hợp lệ.")
         return
 
-    chat_id = str(update.effective_chat.id)
-
-    DATA.setdefault("advance", {}).setdefault(chat_id, {})
-    DATA["advance"][chat_id][staff_name] = (
-        DATA["advance"][chat_id].get(staff_name, 0) + amount
-    )
-
-    save_data(DATA)
+    
     sync_reward_to_sheet(
         staff_name,
         "advance",
@@ -3633,21 +3621,14 @@ async def fine_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Số tiền không hợp lệ.")
         return
 
-    chat_id = str(update.effective_chat.id)
 
-    DATA.setdefault("fine", {}).setdefault(chat_id, {})
-    DATA["fine"][chat_id][staff_name] = (
-        DATA["fine"][chat_id].get(staff_name, 0) + amount
-    )
-
-    save_data(DATA)
+    
     sync_reward_to_sheet(
         staff_name,
         "fine",
         amount
     )
     
-
     await update.message.reply_text(
         f"⚠️ Đã ghi phạt cho {staff_name}: "
         f"{amount:,}đ".replace(",", ".")
