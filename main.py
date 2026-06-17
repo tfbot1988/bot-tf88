@@ -3352,6 +3352,24 @@ def sync_salary_to_sheet(staff_name, salary_type, hourly_rate="", fixed_salary="
 
     except Exception as e:
         print("LOI DONG BO LUONG SHEET:", e)
+def sync_reward_to_sheet(staff_name, action_type, amount, note=""):
+    try:
+        ws = get_worksheet("023_Thuong_Ung_Phat")
+
+        if not ws:
+            print("KHONG MO DUOC SHEET 023_Thuong_Ung_Phat")
+            return
+
+        ws.append_row([
+            datetime.now(TZ).strftime("%d/%m/%Y"),
+            staff_name,
+            action_type,
+            amount,
+            note
+        ])
+
+    except Exception as e:
+        print("LOI GHI THUONG_UNG_PHAT:", e)
 def get_salary_config_from_sheet():
     salary_config = {}
 
@@ -3490,6 +3508,11 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     save_data(DATA)
+    sync_reward_to_sheet(
+        staff_name,
+        "bonus",
+        amount
+    )
     
 
     await update.message.reply_text(
@@ -3544,6 +3567,11 @@ async def advance_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     save_data(DATA)
+    sync_reward_to_sheet(
+        staff_name,
+        "advance",
+        amount
+    )
 
     await update.message.reply_text(
         f"💸 Đã ghi ứng lương cho {staff_name}: "
@@ -3572,6 +3600,12 @@ async def fine_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     save_data(DATA)
+    sync_reward_to_sheet(
+        staff_name,
+        "fine",
+        amount
+    )
+    
 
     await update.message.reply_text(
         f"⚠️ Đã ghi phạt cho {staff_name}: "
