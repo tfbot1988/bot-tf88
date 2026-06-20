@@ -552,6 +552,10 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await update.message.reply_text("❌ Không kết nối được sheet 11_Xuat_Kho.")
             return
 
+        if not kho_ws:
+            await update.message.reply_text("❌ Không kết nối được sheet 07_Quan_Ly_Kho.")
+            return
+
         def get_value(label):
             for line in text.splitlines():
                 if line.lower().startswith(label.lower() + ":"):
@@ -563,6 +567,67 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         ly_do = get_value("Lý do")
         ca = get_value("Ca")
         ghi_chu = get_value("Ghi chú")
+
+        if not mat_hang or not so_luong_xuat:
+            await update.message.reply_text(
+                "⚠️ BÁO XUẤT KHO CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "Mặt hàng:\n"
+                "Số lượng xuất:"
+            )
+            return
+
+        try:
+            so_luong_xuat_int = int(
+                so_luong_xuat
+                .replace(".", "")
+                .replace(",", "")
+                .strip()
+            )
+        except Exception:
+            await update.message.reply_text("❌ Số lượng xuất không hợp lệ.")
+            return
+
+        if so_luong_xuat_int <= 0:
+            await update.message.reply_text("❌ Số lượng xuất phải lớn hơn 0.")
+            return
+
+        rows = kho_ws.get_all_values()
+        found_row = None
+        found_index = None
+
+        for idx, row in enumerate(rows[1:], start=2):
+            ten_hang = row[0].strip().lower() if len(row) > 0 else ""
+
+            if ten_hang == mat_hang.strip().lower():
+                found_row = row
+                found_index = idx
+                break
+
+        if not found_row:
+            await update.message.reply_text("Mặt hàng chưa tồn tại trong kho")
+            return
+
+        try:
+            ton_cu = int(found_row[1]) if len(found_row) > 1 and found_row[1] else 0
+        except Exception:
+            await update.message.reply_text("❌ Tồn kho hiện tại không hợp lệ.")
+            return
+
+        if so_luong_xuat_int > ton_cu:
+            await update.message.reply_text("Không đủ tồn kho để xuất")
+            return
+
+        ton_moi = ton_cu - so_luong_xuat_int
+        try:
+            ton_toi_thieu = int(found_row[3]) if len(found_row) > 3 and found_row[3] else 0
+        except Exception:
+            ton_toi_thieu = 0
+
+        trang_thai = "Sắp hết" if ton_moi <= ton_toi_thieu else "Đủ hàng"
+
+        kho_ws.update_cell(found_index, 2, ton_moi)
+        kho_ws.update_cell(found_index, 5, trang_thai)
 
         ws.append_row(
             [
@@ -576,44 +641,6 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             value_input_option="RAW",
             insert_data_option="INSERT_ROWS"
         )
-    if kho_ws:
-        rows = kho_ws.get_all_values()
-        found = False
-
-        for idx, row in enumerate(rows[1:], start=2):
-            ten_hang = row[0].strip().lower() if len(row) > 0 else ""
-            print("SHEET =", repr(ten_hang))
-            print("INPUT =", repr(mat_hang.strip().lower()))
-
-            if ten_hang == mat_hang.strip().lower():
-                found = True
-                ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
-                ton_moi = ton_cu - int(so_luong_xuat)
-
-                don_vi = row[2] if len(row) > 2 else ""
-                ton_toi_thieu = int(row[3]) if len(row) > 3 and row[3] else 0
-
-                trang_thai = "Sắp hết" if ton_moi <= ton_toi_thieu else "Đủ hàng"
-
-                kho_ws.update_cell(idx, 2, ton_moi)
-                kho_ws.update_cell(idx, 5, trang_thai)
-
-                print("XUAT KHO:", mat_hang, ton_cu, "-", so_luong_xuat, "=", ton_moi)
-
-                break
-        if not found:
-                kho_ws.append_row(
-                    [
-                        mat_hang,
-                        -int(so_luong_xuat),
-                        "",
-                        0,
-                        "Đủ hàng",
-                    ],
-                    value_input_option="RAW",
-                    insert_data_option="INSERT_ROWS"
-                )
-                print("TAO MAT HANG MOI:", mat_hang, so_luong)
         await update.message.reply_text(
             f"📤 Đã ghi nhận xuất kho\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
