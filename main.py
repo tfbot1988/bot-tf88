@@ -428,6 +428,21 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         han_su_dung = get_value("Hạn sử dụng")
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
+        try:
+            so_luong_int = int(
+                so_luong
+                .replace(".", "")
+                .replace(",", "")
+                .strip()
+            )
+        except Exception:
+            await update.message.reply_text("❌ Số lượng nhập phải là số nguyên.")
+            return
+
+        if so_luong_int <= 0:
+            await update.message.reply_text("❌ Số lượng nhập phải lớn hơn 0.")
+            return
+
         if not tong_tien:
             tong_tien = "Chưa nhập"
 
@@ -468,7 +483,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             if ten_hang == mat_hang.strip().lower():
                 found = True
                 ton_cu = int(row[1]) if len(row) > 1 and row[1] else 0
-                ton_moi = ton_cu + int(so_luong)
+                ton_moi = ton_cu + so_luong_int
 
                 don_vi = row[2] if len(row) > 2 else ""
                 ton_toi_thieu = int(row[3]) if len(row) > 3 and row[3] else 0
@@ -485,7 +500,7 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 kho_ws.append_row(
                     [
                         mat_hang,
-                        int(so_luong),
+                        so_luong_int,
                         "",
                         0,
                         "Đủ hàng",
