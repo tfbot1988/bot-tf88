@@ -428,16 +428,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         han_su_dung = get_value("Hạn sử dụng")
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
-        try:
-            so_luong_int = int(
-                so_luong
-                .replace(".", "")
-                .replace(",", "")
-                .strip()
-            )
-        except Exception:
+
+        so_luong_text = so_luong.strip()
+        if not so_luong_text.isdigit():
             await update.message.reply_text("❌ Số lượng nhập phải là số nguyên.")
             return
+
+        so_luong_int = int(so_luong_text)
 
         if so_luong_int <= 0:
             await update.message.reply_text("❌ Số lượng nhập phải lớn hơn 0.")
