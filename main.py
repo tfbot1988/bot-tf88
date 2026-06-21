@@ -428,16 +428,13 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         han_su_dung = get_value("Hạn sử dụng")
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
-        try:
-            so_luong_int = int(
-                so_luong
-                .replace(".", "")
-                .replace(",", "")
-                .strip()
-            )
-        except Exception:
+
+        so_luong_text = so_luong.strip()
+        if not so_luong_text.isdigit():
             await update.message.reply_text("❌ Số lượng nhập phải là số nguyên.")
             return
+
+        so_luong_int = int(so_luong_text)
 
         if so_luong_int <= 0:
             await update.message.reply_text("❌ Số lượng nhập phải lớn hơn 0.")
@@ -449,29 +446,16 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         if not nguoi_duyet:
             nguoi_duyet = "Chưa nhập"
 
-        ws.append_row(
-            [
-                datetime.now(TZ).strftime("%d/%m/%Y"),
-                mat_hang,
-                so_luong,
-                don_gia,
-                tong_tien,
-                nha_cung_cap,
-                han_su_dung,
-                nguoi_duyet,
-                ghi_chu,
-            ],
-            value_input_option="RAW",
-            insert_data_option="INSERT_ROWS"
-        )
         kho_ws = None
         try:
             kho_ws = get_worksheet("07_Quan_Ly_Kho")
         except Exception as e:
             print("LOI MO SHEET KHO:", e)
 
+        if kho_ws is None:
+            await update.message.reply_text("❌ Không kết nối được sheet 07_Quan_Ly_Kho.")
+            return
 
-    if kho_ws:
         rows = kho_ws.get_all_values()
         found = False
 
@@ -509,6 +493,23 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     insert_data_option="INSERT_ROWS"
                 )
                 print("TAO MAT HANG MOI:", mat_hang, so_luong)
+
+        ws.append_row(
+            [
+                datetime.now(TZ).strftime("%d/%m/%Y"),
+                mat_hang,
+                so_luong,
+                don_gia,
+                tong_tien,
+                nha_cung_cap,
+                han_su_dung,
+                nguoi_duyet,
+                ghi_chu,
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS"
+        )
+
         await update.message.reply_text(
             f"✅ Đã ghi nhận nhập hàng\n\n"
             f"📦 Mặt hàng: {mat_hang}\n"
