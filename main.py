@@ -109,6 +109,37 @@ PAYMENT_STATUS_PENDING = "CHO_DUYET"
 PAYMENT_STATUS_APPROVED = "DA_DUYET"
 PAYMENT_STATUS_REJECTED = "TU_CHOI"
 PAYMENT_STATUS_PAID = "DA_THANH_TOAN"
+PAYMENT_APPROVER_USER_IDS = {
+    user_id.strip()
+    for user_id in os.getenv("PAYMENT_APPROVER_USER_IDS", "").split(",")
+    if user_id.strip()
+}
+PAYMENT_APPROVER_USERNAMES = {
+    username.strip().lower().lstrip("@")
+    for username in os.getenv("PAYMENT_APPROVER_USERNAMES", "").split(",")
+    if username.strip()
+}
+PAYMENT_APPROVER_FULL_NAMES = {
+    name.strip().lower()
+    for name in os.getenv("PAYMENT_APPROVER_FULL_NAMES", "Miss Uyên,Uyên,Uyen").split(",")
+    if name.strip()
+}
+PAYMENT_BOSS_USER_IDS = {
+    user_id.strip()
+    for user_id in os.getenv("PAYMENT_BOSS_USER_IDS", "").split(",")
+    if user_id.strip()
+}
+PAYMENT_BOSS_USERNAMES = {
+    username.strip().lower().lstrip("@")
+    for username in os.getenv("PAYMENT_BOSS_USERNAMES", "").split(",")
+    if username.strip()
+}
+PAYMENT_BOSS_FULL_NAMES = {
+    name.strip().lower()
+    for name in os.getenv("PAYMENT_BOSS_FULL_NAMES", "Sếp Tiến,Sep Tien,Tien Tran,Tiến,Tien").split(",")
+    if name.strip()
+}
+PAYMENT_PERMISSION_DENIED = "❌ Bạn không có quyền thực hiện lệnh này."
 
 
 def get_payment_worksheet():
@@ -200,14 +231,50 @@ def find_payment_row(ws, request_id: str):
     return None, None
 
 
+def payment_user_matches(update: Update, user_ids, usernames, full_names) -> bool:
+    user = update.effective_user
+    if not user:
+        return False
+
+    user_id = str(user.id) if user.id else ""
+    username = (user.username or "").strip().lower().lstrip("@")
+    full_name = (user.full_name or user.first_name or "").strip().lower()
+
+    return (
+        user_id in user_ids
+        or username in usernames
+        or full_name in full_names
+    )
+
+
+def is_payment_boss(update: Update) -> bool:
+    return payment_user_matches(
+        update,
+        PAYMENT_BOSS_USER_IDS,
+        PAYMENT_BOSS_USERNAMES,
+        PAYMENT_BOSS_FULL_NAMES,
+    )
+
+
+def is_payment_approver(update: Update) -> bool:
+    return payment_user_matches(
+        update,
+        PAYMENT_APPROVER_USER_IDS,
+        PAYMENT_APPROVER_USERNAMES,
+        PAYMENT_APPROVER_FULL_NAMES,
+    )
+
+
 def can_approve_payment(update: Update) -> bool:
-    # Tách hàm quyền để sau này khóa theo user ID cho Miss Uyên / Sếp Tiến.
-    return True
+    return is_payment_approver(update) or is_payment_boss(update)
+
+
+def can_pay_payment(update: Update) -> bool:
+    return is_payment_approver(update) or is_payment_boss(update)
 
 
 def can_view_payment_report(update: Update) -> bool:
-    # Tách hàm quyền để sau này khóa theo user ID cho Sếp Tiến.
-    return True
+    return is_payment_boss(update)
 
 
 def build_payment_lines(records: List[Dict[str, Any]], title: str) -> str:
@@ -2963,7 +3030,7 @@ async def paymentpending_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def paymentapprove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not can_approve_payment(update):
-        await update.message.reply_text("⛔ Bạn không có quyền duyệt đề nghị thanh toán.")
+        await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
         return
 
     if len(context.args) < 1:
@@ -3005,7 +3072,7 @@ async def paymentapprove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not can_approve_payment(update):
-        await update.message.reply_text("⛔ Bạn không có quyền từ chối đề nghị thanh toán.")
+        await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
         return
 
     if len(context.args) < 1:
@@ -3046,6 +3113,10 @@ async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def paymentpaid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not can_pay_payment(update):
+        await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
+        return
+
     if len(context.args) < 1:
         await update.message.reply_text("Cú pháp:\n/paymentpaid ID\nVí dụ: /paymentpaid DN001")
         return
@@ -3085,7 +3156,7 @@ async def paymentpaid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not can_view_payment_report(update):
-        await update.message.reply_text("⛔ Bạn không có quyền xem báo cáo đề nghị thanh toán.")
+        await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
         return
 
     if len(context.args) < 1 or context.args[0].lower() not in ("week", "month"):
