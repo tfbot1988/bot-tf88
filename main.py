@@ -429,6 +429,10 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         nguoi_duyet = get_value("Người duyệt")
         ghi_chu = get_value("Ghi chú")
 
+        if not mat_hang:
+            await update.message.reply_text("❌ Mặt hàng không được để trống.")
+            return
+
         so_luong_text = so_luong.strip()
         if not so_luong_text.isdigit():
             await update.message.reply_text("❌ Số lượng nhập phải là số nguyên.")
@@ -537,6 +541,16 @@ async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         du_kien = get_value("Dự kiến đủ dùng đến")
         de_xuat = get_value("Đề xuất nhập thêm")
         ghi_chu = get_value("Ghi chú")
+
+        if not mat_hang or not so_luong_con or not muc_do:
+            await update.message.reply_text(
+                "⚠️ BÁO THIẾU HÀNG CHƯA ĐỦ THÔNG TIN\n\n"
+                "Vui lòng điền tối thiểu:\n"
+                "- Mặt hàng\n"
+                "- Số lượng còn\n"
+                "- Mức độ"
+            )
+            return
 
         ws.append_row(
             [
