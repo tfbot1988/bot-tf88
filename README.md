@@ -13,11 +13,19 @@ Telegram bot nhắc việc chạy bằng Python.
 - `/remove <số>`
 - `/clear`
 - `/now`
+- `/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG`
+- `/paymentlist`
+- `/paymentpending`
+- `/paymentapprove ID`
+- `/paymentreject ID`
+- `/paymentpaid ID`
+- `/paymentreport week|month`
 
 Ví dụ:
 ```
 /addat 06:38 tue,wed,thu,fri,sat MỞ CA SÁNG TF
 /addat 21:38 mon,tue,wed,thu,fri,sat ĐÓNG CA TF
+/paymentrequest KHO 1500000 Nhập hàng sữa
 ```
 
 ## Render

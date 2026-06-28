@@ -8,7 +8,7 @@ from unittest import result
 from zoneinfo import ZoneInfo
 from gspread import spreadsheet
 from lunardate import LunarDate
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -89,6 +89,143 @@ def get_worksheet(sheet_name):
     print("SHEET TITLES:", [ws.title for ws in spreadsheet.worksheets()])
 
     return spreadsheet.worksheet(sheet_name)
+
+PAYMENT_SHEET_NAME = "12_De_Nghi_Thanh_Toan"
+PAYMENT_HEADERS = [
+    "Mã đề nghị",
+    "Ngày đề nghị",
+    "Người đề nghị",
+    "Loại chi phí",
+    "Nội dung",
+    "Số tiền",
+    "Trạng thái",
+    "Người duyệt",
+    "Ngày duyệt",
+    "Người thanh toán",
+    "Ngày thanh toán",
+    "Ghi chú",
+]
+PAYMENT_STATUS_PENDING = "CHO_DUYET"
+PAYMENT_STATUS_APPROVED = "DA_DUYET"
+PAYMENT_STATUS_REJECTED = "TU_CHOI"
+PAYMENT_STATUS_PAID = "DA_THANH_TOAN"
+
+
+def get_payment_worksheet():
+    if not gs_client:
+        return None
+
+    spreadsheet_obj = gs_client.open("TF - Hệ Thống Vận Hành")
+    worksheet = None
+
+    for ws in spreadsheet_obj.worksheets():
+        if ws.title == PAYMENT_SHEET_NAME:
+            worksheet = ws
+            break
+
+    if worksheet is None:
+        worksheet = spreadsheet_obj.add_worksheet(
+            title=PAYMENT_SHEET_NAME,
+            rows=1000,
+            cols=len(PAYMENT_HEADERS),
+        )
+        worksheet.append_row(PAYMENT_HEADERS, value_input_option="RAW")
+        return worksheet
+
+    first_row = worksheet.row_values(1)
+    if not first_row:
+        worksheet.append_row(PAYMENT_HEADERS, value_input_option="RAW")
+    elif first_row[:len(PAYMENT_HEADERS)] != PAYMENT_HEADERS:
+        worksheet.insert_row(PAYMENT_HEADERS, 1)
+
+    return worksheet
+
+
+def telegram_user_name(update: Update) -> str:
+    user = update.effective_user
+    if not user:
+        return "Không rõ"
+    if user.username:
+        return f"@{user.username}"
+    return user.full_name or user.first_name or "Không rõ"
+
+
+def parse_positive_amount(amount_text: str) -> int:
+    normalized = amount_text.replace(".", "").replace(",", "").strip()
+    amount = int(normalized)
+    if amount <= 0:
+        raise ValueError("Số tiền phải là số dương.")
+    return amount
+
+
+def format_vnd(amount: int) -> str:
+    return f"{amount:,}đ".replace(",", ".")
+
+
+def parse_payment_date(date_text: str) -> Optional[datetime]:
+    date_text = str(date_text).strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(date_text, fmt).replace(tzinfo=TZ)
+        except Exception:
+            continue
+    return None
+
+
+def next_payment_id(rows: List[List[str]]) -> str:
+    max_number = 0
+    for row in rows[1:]:
+        if not row:
+            continue
+        request_id = str(row[0]).strip().upper()
+        if not request_id.startswith("DN"):
+            continue
+        try:
+            max_number = max(max_number, int(request_id[2:]))
+        except Exception:
+            continue
+    return f"DN{max_number + 1:03d}"
+
+
+def payment_row_to_dict(row: List[str]) -> Dict[str, Any]:
+    padded = row + [""] * (len(PAYMENT_HEADERS) - len(row))
+    return dict(zip(PAYMENT_HEADERS, padded))
+
+
+def find_payment_row(ws, request_id: str):
+    rows = ws.get_all_values()
+    normalized_id = request_id.strip().upper()
+    for row_index, row in enumerate(rows[1:], start=2):
+        current_id = str(row[0]).strip().upper() if row else ""
+        if current_id == normalized_id:
+            return row_index, payment_row_to_dict(row)
+    return None, None
+
+
+def can_approve_payment(update: Update) -> bool:
+    # Tách hàm quyền để sau này khóa theo user ID cho Miss Uyên / Sếp Tiến.
+    return True
+
+
+def can_view_payment_report(update: Update) -> bool:
+    # Tách hàm quyền để sau này khóa theo user ID cho Sếp Tiến.
+    return True
+
+
+def build_payment_lines(records: List[Dict[str, Any]], title: str) -> str:
+    lines = [title, ""]
+    for row in records:
+        try:
+            amount = int(str(row.get("Số tiền", "0")).replace(".", "").replace(",", "").strip() or 0)
+        except Exception:
+            amount = 0
+        lines.append(f"{row.get('Mã đề nghị', '')} | {row.get('Trạng thái', '')}")
+        lines.append(f"Người đề nghị: {row.get('Người đề nghị', '')}")
+        lines.append(f"Loại chi phí: {row.get('Loại chi phí', '')}")
+        lines.append(f"Nội dung: {row.get('Nội dung', '')}")
+        lines.append(f"Số tiền: {format_vnd(amount)}")
+        lines.append("")
+    return "\n".join(lines).strip()
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
     if days == "daily":
@@ -208,7 +345,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Lệnh:\n"
         "/addat <giờ> <ngày> <nội dung>\n"
         "Ví dụ: /addat 06:38 mon,tue,wed Mở ca\n"
-        "/list\n/remove <số>\n/clear\n/now\n/help"
+        "/list\n/remove <số>\n/clear\n/now\n/help\n\n"
+        "Đề nghị thanh toán:\n"
+        "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
+        "/paymentlist\n/paymentpending\n"
+        "/paymentapprove ID\n/paymentreject ID\n/paymentpaid ID\n"
+        "/paymentreport week|month"
     )
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2704,6 +2846,321 @@ async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await update.message.reply_text("\n".join(lines))                           
+
+async def paymentrequest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 3:
+        await update.message.reply_text(
+            "Cú pháp:\n/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
+            "Ví dụ: /paymentrequest KHO 1500000 Nhập hàng sữa"
+        )
+        return
+
+    expense_type = context.args[0].strip().upper()
+    if not expense_type:
+        await update.message.reply_text("❌ Loại chi phí không được rỗng.")
+        return
+
+    try:
+        amount = parse_positive_amount(context.args[1])
+    except Exception:
+        await update.message.reply_text("❌ Số tiền phải là số dương.")
+        return
+
+    content = " ".join(context.args[2:]).strip()
+    if not content:
+        await update.message.reply_text("❌ Nội dung không được rỗng.")
+        return
+
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        rows = ws.get_all_values()
+        request_id = next_payment_id(rows)
+        request_date = datetime.now(TZ).strftime("%d/%m/%Y")
+        requester = telegram_user_name(update)
+
+        ws.append_row(
+            [
+                request_id,
+                request_date,
+                requester,
+                expense_type,
+                content,
+                amount,
+                PAYMENT_STATUS_PENDING,
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+            value_input_option="RAW",
+            insert_data_option="INSERT_ROWS",
+        )
+
+        await update.message.reply_text(
+            f"✅ Đã tạo đề nghị thanh toán {request_id}\n"
+            f"Loại chi phí: {expense_type}\n"
+            f"Nội dung: {content}\n"
+            f"Số tiền: {format_vnd(amount)}\n"
+            f"Trạng thái: {PAYMENT_STATUS_PENDING}"
+        )
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Có đề nghị thanh toán mới cần duyệt: {request_id}",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi tạo đề nghị thanh toán: {e}")
+
+
+async def paymentlist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        rows = ws.get_all_values()
+        records = [payment_row_to_dict(row) for row in rows[1:] if row]
+        records = records[-10:]
+
+        if not records:
+            await update.message.reply_text("📋 Chưa có đề nghị thanh toán.")
+            return
+
+        await update.message.reply_text(
+            build_payment_lines(records, "📋 ĐỀ NGHỊ THANH TOÁN GẦN NHẤT")
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc đề nghị thanh toán: {e}")
+
+
+async def paymentpending_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        rows = ws.get_all_values()
+        records = [
+            payment_row_to_dict(row)
+            for row in rows[1:]
+            if row and payment_row_to_dict(row).get("Trạng thái") == PAYMENT_STATUS_PENDING
+        ]
+
+        if not records:
+            await update.message.reply_text("✅ Không có đề nghị đang chờ duyệt.")
+            return
+
+        await update.message.reply_text(
+            build_payment_lines(records[-20:], "⏳ ĐỀ NGHỊ ĐANG CHỜ DUYỆT")
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc đề nghị chờ duyệt: {e}")
+
+
+async def paymentapprove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not can_approve_payment(update):
+        await update.message.reply_text("⛔ Bạn không có quyền duyệt đề nghị thanh toán.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("Cú pháp:\n/paymentapprove ID\nVí dụ: /paymentapprove DN001")
+        return
+
+    request_id = context.args[0].strip().upper()
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        row_index, record = find_payment_row(ws, request_id)
+        if not record:
+            await update.message.reply_text(f"❌ Không tìm thấy đề nghị {request_id}.")
+            return
+
+        current_status = str(record.get("Trạng thái", "")).strip()
+        if current_status != PAYMENT_STATUS_PENDING:
+            await update.message.reply_text(
+                f"❌ Không thể duyệt {request_id} vì trạng thái hiện tại là {current_status}.\n"
+                f"Chỉ duyệt được đề nghị {PAYMENT_STATUS_PENDING}."
+            )
+            return
+
+        approver = telegram_user_name(update)
+        approve_date = datetime.now(TZ).strftime("%d/%m/%Y")
+        ws.update(f"G{row_index}:I{row_index}", [[PAYMENT_STATUS_APPROVED, approver, approve_date]], value_input_option="RAW")
+
+        await update.message.reply_text(f"✅ Đề nghị {request_id} đã được duyệt.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Đề nghị thanh toán {request_id} đã được duyệt.",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi duyệt đề nghị thanh toán: {e}")
+
+
+async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not can_approve_payment(update):
+        await update.message.reply_text("⛔ Bạn không có quyền từ chối đề nghị thanh toán.")
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("Cú pháp:\n/paymentreject ID\nVí dụ: /paymentreject DN001")
+        return
+
+    request_id = context.args[0].strip().upper()
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        row_index, record = find_payment_row(ws, request_id)
+        if not record:
+            await update.message.reply_text(f"❌ Không tìm thấy đề nghị {request_id}.")
+            return
+
+        current_status = str(record.get("Trạng thái", "")).strip()
+        if current_status != PAYMENT_STATUS_PENDING:
+            await update.message.reply_text(
+                f"❌ Không thể từ chối {request_id} vì trạng thái hiện tại là {current_status}.\n"
+                f"Chỉ từ chối được đề nghị {PAYMENT_STATUS_PENDING}."
+            )
+            return
+
+        approver = telegram_user_name(update)
+        reject_date = datetime.now(TZ).strftime("%d/%m/%Y")
+        ws.update(f"G{row_index}:I{row_index}", [[PAYMENT_STATUS_REJECTED, approver, reject_date]], value_input_option="RAW")
+
+        await update.message.reply_text(f"✅ Đề nghị {request_id} đã bị từ chối.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Đề nghị thanh toán {request_id} đã bị từ chối.",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi từ chối đề nghị thanh toán: {e}")
+
+
+async def paymentpaid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 1:
+        await update.message.reply_text("Cú pháp:\n/paymentpaid ID\nVí dụ: /paymentpaid DN001")
+        return
+
+    request_id = context.args[0].strip().upper()
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        row_index, record = find_payment_row(ws, request_id)
+        if not record:
+            await update.message.reply_text(f"❌ Không tìm thấy đề nghị {request_id}.")
+            return
+
+        current_status = str(record.get("Trạng thái", "")).strip()
+        if current_status != PAYMENT_STATUS_APPROVED:
+            await update.message.reply_text(
+                f"❌ Không thể thanh toán {request_id} vì trạng thái hiện tại là {current_status}.\n"
+                f"Chỉ thanh toán được đề nghị {PAYMENT_STATUS_APPROVED}."
+            )
+            return
+
+        payer = telegram_user_name(update)
+        paid_date = datetime.now(TZ).strftime("%d/%m/%Y")
+        ws.update(f"G{row_index}:K{row_index}", [[PAYMENT_STATUS_PAID, record.get("Người duyệt", ""), record.get("Ngày duyệt", ""), payer, paid_date]], value_input_option="RAW")
+
+        await update.message.reply_text(f"✅ Đề nghị {request_id} đã được thanh toán.")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Đề nghị thanh toán {request_id} đã được thanh toán.",
+        )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đánh dấu thanh toán: {e}")
+
+
+async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not can_view_payment_report(update):
+        await update.message.reply_text("⛔ Bạn không có quyền xem báo cáo đề nghị thanh toán.")
+        return
+
+    if len(context.args) < 1 or context.args[0].lower() not in ("week", "month"):
+        await update.message.reply_text(
+            "Cú pháp:\n/paymentreport week\n/paymentreport month"
+        )
+        return
+
+    report_type = context.args[0].lower()
+    now_dt = datetime.now(TZ)
+    if report_type == "week":
+        start_date = (now_dt - timedelta(days=now_dt.weekday())).date()
+        end_date = start_date + timedelta(days=6)
+        title = f"📊 BÁO CÁO ĐỀ NGHỊ THANH TOÁN TUẦN\n{start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+    else:
+        start_date = now_dt.replace(day=1).date()
+        if now_dt.month == 12:
+            next_month = now_dt.replace(year=now_dt.year + 1, month=1, day=1)
+        else:
+            next_month = now_dt.replace(month=now_dt.month + 1, day=1)
+        end_date = (next_month - timedelta(days=1)).date()
+        title = f"📊 BÁO CÁO ĐỀ NGHỊ THANH TOÁN THÁNG {now_dt.strftime('%m/%Y')}"
+
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        rows = ws.get_all_values()
+        records = []
+        for row in rows[1:]:
+            if not row:
+                continue
+            record = payment_row_to_dict(row)
+            request_date = parse_payment_date(record.get("Ngày đề nghị", ""))
+            if not request_date:
+                continue
+            if start_date <= request_date.date() <= end_date:
+                records.append(record)
+
+        counts = {
+            PAYMENT_STATUS_PENDING: 0,
+            PAYMENT_STATUS_APPROVED: 0,
+            PAYMENT_STATUS_REJECTED: 0,
+            PAYMENT_STATUS_PAID: 0,
+        }
+        paid_total = 0
+
+        for record in records:
+            status = str(record.get("Trạng thái", "")).strip()
+            if status in counts:
+                counts[status] += 1
+            if status == PAYMENT_STATUS_PAID:
+                try:
+                    paid_total += int(str(record.get("Số tiền", "0")).replace(".", "").replace(",", "").strip() or 0)
+                except Exception:
+                    pass
+
+        lines = [
+            title,
+            "",
+            f"Tổng số đề nghị: {len(records)}",
+            f"Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
+            f"Đã duyệt: {counts[PAYMENT_STATUS_APPROVED]}",
+            f"Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
+            f"Đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
+            f"Tổng tiền đã thanh toán: {format_vnd(paid_total)}",
+        ]
+        await update.message.reply_text("\n".join(lines))
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi báo cáo đề nghị thanh toán: {e}")
+
 async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sheet = get_worksheet("00_Nhan_Vien")
 
@@ -4755,6 +5212,13 @@ def main() -> None:
     app.add_handler(CommandHandler("financemonth", financemonth_cmd))
     app.add_handler(CommandHandler("resetfinance", resetfinance_cmd))
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
+    app.add_handler(CommandHandler("paymentrequest", paymentrequest_cmd))
+    app.add_handler(CommandHandler("paymentlist", paymentlist_cmd))
+    app.add_handler(CommandHandler("paymentpending", paymentpending_cmd))
+    app.add_handler(CommandHandler("paymentapprove", paymentapprove_cmd))
+    app.add_handler(CommandHandler("paymentreject", paymentreject_cmd))
+    app.add_handler(CommandHandler("paymentpaid", paymentpaid_cmd))
+    app.add_handler(CommandHandler("paymentreport", paymentreport_cmd))
     app.add_handler(CommandHandler("shift", shift_cmd))
     app.add_handler(CommandHandler("week", week_cmd))
     app.add_handler(CommandHandler("ranh", ranh_cmd))
