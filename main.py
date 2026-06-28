@@ -133,10 +133,8 @@ def get_payment_worksheet():
         return worksheet
 
     first_row = worksheet.row_values(1)
-    if not first_row:
-        worksheet.append_row(PAYMENT_HEADERS, value_input_option="RAW")
-    elif first_row[:len(PAYMENT_HEADERS)] != PAYMENT_HEADERS:
-        worksheet.insert_row(PAYMENT_HEADERS, 1)
+    if first_row[:len(PAYMENT_HEADERS)] != PAYMENT_HEADERS:
+        worksheet.update("A1:L1", [PAYMENT_HEADERS], value_input_option="RAW")
 
     return worksheet
 
