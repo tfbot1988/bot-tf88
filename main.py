@@ -3151,10 +3151,10 @@ async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             title,
             "",
             f"Tổng số đề nghị: {len(records)}",
-            f"Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
-            f"Đã duyệt: {counts[PAYMENT_STATUS_APPROVED]}",
-            f"Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
-            f"Đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
+            f"Tổng đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
+            f"Tổng đã duyệt: {counts[PAYMENT_STATUS_APPROVED]}",
+            f"Tổng đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
+            f"Tổng đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
             f"Tổng tiền đã thanh toán: {format_vnd(paid_total)}",
         ]
         await update.message.reply_text("\n".join(lines))
