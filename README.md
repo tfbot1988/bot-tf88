@@ -18,7 +18,7 @@ Telegram bot nhắc việc chạy bằng Python.
 - `/paymentdetail ID`
 - `/paymentpending`
 - `/paymentapprove ID`
-- `/paymentreject ID`
+- `/paymentreject ID Lý_do`
 - `/paymentpaid ID`
 - `/paymentreport week|month`
 

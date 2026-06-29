@@ -121,7 +121,22 @@ PAYMENT_APPROVER_USERNAMES = {
 }
 PAYMENT_APPROVER_FULL_NAMES = {
     name.strip().lower()
-    for name in os.getenv("PAYMENT_APPROVER_FULL_NAMES", "Miss Uyên,Uyên,Uyen").split(",")
+    for name in os.getenv("PAYMENT_APPROVER_FULL_NAMES", "").split(",")
+    if name.strip()
+}
+PAYMENT_CREATOR_USER_IDS = {
+    user_id.strip()
+    for user_id in os.getenv("PAYMENT_CREATOR_USER_IDS", "").split(",")
+    if user_id.strip()
+}
+PAYMENT_CREATOR_USERNAMES = {
+    username.strip().lower().lstrip("@")
+    for username in os.getenv("PAYMENT_CREATOR_USERNAMES", "").split(",")
+    if username.strip()
+}
+PAYMENT_CREATOR_FULL_NAMES = {
+    name.strip().lower()
+    for name in os.getenv("PAYMENT_CREATOR_FULL_NAMES", "").split(",")
     if name.strip()
 }
 PAYMENT_BOSS_USER_IDS = {
@@ -136,7 +151,7 @@ PAYMENT_BOSS_USERNAMES = {
 }
 PAYMENT_BOSS_FULL_NAMES = {
     name.strip().lower()
-    for name in os.getenv("PAYMENT_BOSS_FULL_NAMES", "Sếp Tiến,Sep Tien,Tien Tran,Tiến,Tien").split(",")
+    for name in os.getenv("PAYMENT_BOSS_FULL_NAMES", "").split(",")
     if name.strip()
 }
 PAYMENT_PERMISSION_DENIED = "❌ Bạn không có quyền thực hiện lệnh này."
@@ -147,27 +162,10 @@ def get_payment_worksheet():
         return None
 
     spreadsheet_obj = gs_client.open("TF - Hệ Thống Vận Hành")
-    worksheet = None
-
-    for ws in spreadsheet_obj.worksheets():
-        if ws.title == PAYMENT_SHEET_NAME:
-            worksheet = ws
-            break
-
-    if worksheet is None:
-        worksheet = spreadsheet_obj.add_worksheet(
-            title=PAYMENT_SHEET_NAME,
-            rows=1000,
-            cols=len(PAYMENT_HEADERS),
-        )
-        worksheet.append_row(PAYMENT_HEADERS, value_input_option="RAW")
-        return worksheet
-
-    first_row = worksheet.row_values(1)
-    if first_row[:len(PAYMENT_HEADERS)] != PAYMENT_HEADERS:
-        worksheet.update("A1:L1", [PAYMENT_HEADERS], value_input_option="RAW")
-
-    return worksheet
+    try:
+        return spreadsheet_obj.worksheet(PAYMENT_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        return None
 
 
 def telegram_user_name(update: Update) -> str:
@@ -284,15 +282,31 @@ def is_payment_approver(update: Update) -> bool:
 
 
 def can_approve_payment(update: Update) -> bool:
-    return is_payment_approver(update) or is_payment_boss(update)
+    return is_payment_approver(update)
 
 
 def can_pay_payment(update: Update) -> bool:
-    return is_payment_approver(update) or is_payment_boss(update)
+    return is_payment_approver(update)
 
 
 def can_view_payment_report(update: Update) -> bool:
     return is_payment_boss(update)
+
+
+def can_create_payment(update: Update) -> bool:
+    if not PAYMENT_CREATOR_USER_IDS and not PAYMENT_CREATOR_USERNAMES and not PAYMENT_CREATOR_FULL_NAMES:
+        return update.effective_user is not None
+
+    return (
+        payment_user_matches(
+            update,
+            PAYMENT_CREATOR_USER_IDS,
+            PAYMENT_CREATOR_USERNAMES,
+            PAYMENT_CREATOR_FULL_NAMES,
+        )
+        or is_payment_approver(update)
+        or is_payment_boss(update)
+    )
 
 
 def build_payment_lines(records: List[Dict[str, Any]], title: str) -> str:
@@ -451,7 +465,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Đề nghị thanh toán:\n"
         "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
         "/paymentlist\n/paymentdetail ID\n/paymentpending\n"
-        "/paymentapprove ID\n/paymentreject ID\n/paymentpaid ID\n"
+        "/paymentapprove ID\n/paymentreject ID Lý_do\n/paymentpaid ID\n"
         "/paymentreport week|month"
     )
 
@@ -3138,11 +3152,16 @@ async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
         return
 
-    if len(context.args) < 1:
-        await update.message.reply_text("Cú pháp:\n/paymentreject ID\nVí dụ: /paymentreject DN001")
+    if len(context.args) < 2:
+        await update.message.reply_text("Cú pháp:\n/paymentreject ID Lý_do\nVí dụ: /paymentreject DN001 Thiếu hóa đơn")
         return
 
     request_id = context.args[0].strip().upper()
+    reject_reason = " ".join(context.args[1:]).strip()
+    if not reject_reason:
+        await update.message.reply_text("❌ Lý do từ chối không được rỗng.")
+        return
+
     try:
         ws = get_payment_worksheet()
         if not ws:
@@ -3165,15 +3184,17 @@ async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         approver = telegram_user_name(update)
         reject_date = datetime.now(TZ).strftime("%d/%m/%Y")
         ws.update(f"G{row_index}:I{row_index}", [[PAYMENT_STATUS_REJECTED, approver, reject_date]], value_input_option="RAW")
+        ws.update(f"L{row_index}", [[reject_reason]], value_input_option="RAW")
 
         await update.message.reply_text(
             f"❌ Đề nghị {request_id} đã bị từ chối.\n"
             f"👤 Người duyệt: {approver}\n"
-            f"📅 Ngày duyệt: {reject_date}"
+            f"📅 Ngày duyệt: {reject_date}\n"
+            f"🗒 Lý do: {reject_reason}"
         )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"❌ Đề nghị thanh toán {request_id} đã bị từ chối bởi {approver}.",
+            text=f"❌ Đề nghị thanh toán {request_id} đã bị từ chối bởi {approver}.\n🗒 Lý do: {reject_reason}",
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi từ chối đề nghị thanh toán: {e}")
