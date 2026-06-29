@@ -15,6 +15,7 @@ Telegram bot nhắc việc chạy bằng Python.
 - `/now`
 - `/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG`
 - `/paymentlist`
+- `/paymentdetail ID`
 - `/paymentpending`
 - `/paymentapprove ID`
 - `/paymentreject ID`

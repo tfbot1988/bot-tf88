@@ -191,6 +191,24 @@ def format_vnd(amount: int) -> str:
     return f"{amount:,}đ".replace(",", ".")
 
 
+def payment_amount_from_record(record: Dict[str, Any]) -> int:
+    try:
+        return int(str(record.get("Số tiền", "0")).replace(".", "").replace(",", "").strip() or 0)
+    except Exception:
+        return 0
+
+
+def payment_status_text(status: str) -> str:
+    status = str(status).strip()
+    status_icons = {
+        PAYMENT_STATUS_PENDING: "⏳",
+        PAYMENT_STATUS_APPROVED: "✅",
+        PAYMENT_STATUS_REJECTED: "❌",
+        PAYMENT_STATUS_PAID: "💸",
+    }
+    return f"{status_icons.get(status, '•')} {status or 'Chưa rõ'}"
+
+
 def parse_payment_date(date_text: str) -> Optional[datetime]:
     date_text = str(date_text).strip()
     for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
@@ -279,18 +297,37 @@ def can_view_payment_report(update: Update) -> bool:
 
 def build_payment_lines(records: List[Dict[str, Any]], title: str) -> str:
     lines = [title, ""]
-    for row in records:
-        try:
-            amount = int(str(row.get("Số tiền", "0")).replace(".", "").replace(",", "").strip() or 0)
-        except Exception:
-            amount = 0
-        lines.append(f"{row.get('Mã đề nghị', '')} | {row.get('Trạng thái', '')}")
-        lines.append(f"Người đề nghị: {row.get('Người đề nghị', '')}")
-        lines.append(f"Loại chi phí: {row.get('Loại chi phí', '')}")
-        lines.append(f"Nội dung: {row.get('Nội dung', '')}")
-        lines.append(f"Số tiền: {format_vnd(amount)}")
+    for index, row in enumerate(records, start=1):
+        amount = payment_amount_from_record(row)
+        lines.append(
+            f"{index}. {row.get('Mã đề nghị', '')} - {payment_status_text(row.get('Trạng thái', ''))}"
+        )
+        lines.append(f"   👤 Người đề nghị: {row.get('Người đề nghị', '')}")
+        lines.append(f"   🧾 Loại chi phí: {row.get('Loại chi phí', '')}")
+        lines.append(f"   📝 Nội dung: {row.get('Nội dung', '')}")
+        lines.append(f"   💰 Số tiền: {format_vnd(amount)}")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def build_payment_detail(record: Dict[str, Any]) -> str:
+    amount = payment_amount_from_record(record)
+    lines = [
+        f"📄 CHI TIẾT ĐỀ NGHỊ {record.get('Mã đề nghị', '')}",
+        "",
+        f"📅 Ngày đề nghị: {record.get('Ngày đề nghị', '') or 'Chưa có'}",
+        f"👤 Người đề nghị: {record.get('Người đề nghị', '') or 'Chưa có'}",
+        f"🧾 Loại chi phí: {record.get('Loại chi phí', '') or 'Chưa có'}",
+        f"📝 Nội dung: {record.get('Nội dung', '') or 'Chưa có'}",
+        f"💰 Số tiền: {format_vnd(amount)}",
+        f"📌 Trạng thái: {payment_status_text(record.get('Trạng thái', ''))}",
+        f"✅ Người duyệt: {record.get('Người duyệt', '') or 'Chưa có'}",
+        f"📅 Ngày duyệt: {record.get('Ngày duyệt', '') or 'Chưa có'}",
+        f"💸 Người thanh toán: {record.get('Người thanh toán', '') or 'Chưa có'}",
+        f"📅 Ngày thanh toán: {record.get('Ngày thanh toán', '') or 'Chưa có'}",
+        f"🗒 Ghi chú: {record.get('Ghi chú', '') or 'Không có'}",
+    ]
+    return "\n".join(lines)
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
     if days == "daily":
@@ -413,7 +450,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/list\n/remove <số>\n/clear\n/now\n/help\n\n"
         "Đề nghị thanh toán:\n"
         "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
-        "/paymentlist\n/paymentpending\n"
+        "/paymentlist\n/paymentdetail ID\n/paymentpending\n"
         "/paymentapprove ID\n/paymentreject ID\n/paymentpaid ID\n"
         "/paymentreport week|month"
     )
@@ -2968,14 +3005,14 @@ async def paymentrequest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         await update.message.reply_text(
             f"✅ Đã tạo đề nghị thanh toán {request_id}\n"
-            f"Loại chi phí: {expense_type}\n"
-            f"Nội dung: {content}\n"
-            f"Số tiền: {format_vnd(amount)}\n"
-            f"Trạng thái: {PAYMENT_STATUS_PENDING}"
+            f"🧾 Loại chi phí: {expense_type}\n"
+            f"📝 Nội dung: {content}\n"
+            f"💰 Số tiền: {format_vnd(amount)}\n"
+            f"📌 Trạng thái: {payment_status_text(PAYMENT_STATUS_PENDING)}"
         )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Có đề nghị thanh toán mới cần duyệt: {request_id}",
+            text=f"⏳ Có đề nghị thanh toán mới cần duyệt: {request_id}",
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi tạo đề nghị thanh toán: {e}")
@@ -3001,6 +3038,28 @@ async def paymentlist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi đọc đề nghị thanh toán: {e}")
+
+
+async def paymentdetail_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 1:
+        await update.message.reply_text("Cú pháp:\n/paymentdetail ID\nVí dụ: /paymentdetail DN001")
+        return
+
+    request_id = context.args[0].strip().upper()
+    try:
+        ws = get_payment_worksheet()
+        if not ws:
+            await update.message.reply_text("❌ Chưa kết nối Google Sheet.")
+            return
+
+        _row_index, record = find_payment_row(ws, request_id)
+        if not record:
+            await update.message.reply_text(f"❌ Không tìm thấy đề nghị {request_id}.")
+            return
+
+        await update.message.reply_text(build_payment_detail(record))
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi đọc chi tiết đề nghị thanh toán: {e}")
 
 
 async def paymentpending_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3061,10 +3120,14 @@ async def paymentapprove_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         approve_date = datetime.now(TZ).strftime("%d/%m/%Y")
         ws.update(f"G{row_index}:I{row_index}", [[PAYMENT_STATUS_APPROVED, approver, approve_date]], value_input_option="RAW")
 
-        await update.message.reply_text(f"✅ Đề nghị {request_id} đã được duyệt.")
+        await update.message.reply_text(
+            f"✅ Đề nghị {request_id} đã được duyệt.\n"
+            f"👤 Người duyệt: {approver}\n"
+            f"📅 Ngày duyệt: {approve_date}"
+        )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Đề nghị thanh toán {request_id} đã được duyệt.",
+            text=f"✅ Đề nghị thanh toán {request_id} đã được duyệt bởi {approver}.",
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi duyệt đề nghị thanh toán: {e}")
@@ -3103,10 +3166,14 @@ async def paymentreject_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reject_date = datetime.now(TZ).strftime("%d/%m/%Y")
         ws.update(f"G{row_index}:I{row_index}", [[PAYMENT_STATUS_REJECTED, approver, reject_date]], value_input_option="RAW")
 
-        await update.message.reply_text(f"✅ Đề nghị {request_id} đã bị từ chối.")
+        await update.message.reply_text(
+            f"❌ Đề nghị {request_id} đã bị từ chối.\n"
+            f"👤 Người duyệt: {approver}\n"
+            f"📅 Ngày duyệt: {reject_date}"
+        )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Đề nghị thanh toán {request_id} đã bị từ chối.",
+            text=f"❌ Đề nghị thanh toán {request_id} đã bị từ chối bởi {approver}.",
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi từ chối đề nghị thanh toán: {e}")
@@ -3145,10 +3212,14 @@ async def paymentpaid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         paid_date = datetime.now(TZ).strftime("%d/%m/%Y")
         ws.update(f"G{row_index}:K{row_index}", [[PAYMENT_STATUS_PAID, record.get("Người duyệt", ""), record.get("Ngày duyệt", ""), payer, paid_date]], value_input_option="RAW")
 
-        await update.message.reply_text(f"✅ Đề nghị {request_id} đã được thanh toán.")
+        await update.message.reply_text(
+            f"💸 Đề nghị {request_id} đã được thanh toán.\n"
+            f"👤 Người thanh toán: {payer}\n"
+            f"📅 Ngày thanh toán: {paid_date}"
+        )
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Đề nghị thanh toán {request_id} đã được thanh toán.",
+            text=f"💸 Đề nghị thanh toán {request_id} đã được thanh toán bởi {payer}.",
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Lỗi đánh dấu thanh toán: {e}")
@@ -3222,10 +3293,10 @@ async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             title,
             "",
             f"Tổng số đề nghị: {len(records)}",
-            f"Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
-            f"Đã duyệt: {approved_total}",
-            f"Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
-            f"Đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
+            f"⏳ Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
+            f"✅ Đã duyệt: {approved_total}",
+            f"❌ Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
+            f"💸 Đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
             f"Tổng tiền đã thanh toán: {format_vnd(paid_total)}",
         ]
         await update.message.reply_text("\n".join(lines))
@@ -5285,6 +5356,7 @@ def main() -> None:
     app.add_handler(CommandHandler("plmonth", plmonth_cmd))
     app.add_handler(CommandHandler("paymentrequest", paymentrequest_cmd))
     app.add_handler(CommandHandler("paymentlist", paymentlist_cmd))
+    app.add_handler(CommandHandler("paymentdetail", paymentdetail_cmd))
     app.add_handler(CommandHandler("paymentpending", paymentpending_cmd))
     app.add_handler(CommandHandler("paymentapprove", paymentapprove_cmd))
     app.add_handler(CommandHandler("paymentreject", paymentreject_cmd))
