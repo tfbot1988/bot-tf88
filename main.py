@@ -156,6 +156,122 @@ PAYMENT_BOSS_FULL_NAMES = {
 }
 PAYMENT_PERMISSION_DENIED = "❌ Bạn không có quyền thực hiện lệnh này."
 
+COMMAND_MASTER_LIST = {
+    "Chấm công & Tính lương": [
+        "todaywork",
+        "checkin",
+        "checkout",
+        "fixcheckin",
+        "fixcheckout",
+        "payrollweek",
+        "payrollmonth",
+        "salarylist",
+        "payrollexport",
+        "resetpayroll",
+        "staffadd",
+        "stafflist",
+        "staffremove",
+        "salarytype",
+        "fixedsalary",
+    ],
+    "Xếp ca": [
+        "shift",
+        "week",
+        "ranh",
+        "lich",
+        "tonggio",
+        "thieuca",
+        "nhanvien",
+        "canhan",
+        "canhdong",
+        "clearshift",
+        "chotlich",
+        "doica",
+        "duyetca",
+        "scanthieuca",
+    ],
+    "Kho & Nhập hàng": [
+        "tonkho",
+        "nhaphang",
+        "xuatkho",
+        "thieuhang",
+        "kiemkho",
+        "khohelp",
+    ],
+    "Doanh thu & P/L": [
+        "revenue",
+        "revenuelist",
+        "revenueweek",
+        "revenuemonth",
+        "revenuedashboard",
+        "expense",
+        "expenselist",
+        "pl",
+        "financeweek",
+        "financemonth",
+        "resetfinance",
+    ],
+    "Đề nghị thanh toán": [
+        "paymentrequest",
+        "paymentlist",
+        "paymentdetail",
+        "paymentpending",
+        "paymentapprove",
+        "paymentreject",
+        "paymentpaid",
+        "paymentreport",
+    ],
+}
+
+COMMAND_ROLE_MAP = {
+    "nhan_vien": [
+        "checkin",
+        "checkout",
+        "todaywork",
+        "shift",
+        "week",
+        "ranh",
+        "lich",
+        "tonkho",
+        "thieuhang",
+        "paymentrequest",
+        "paymentlist",
+        "paymentdetail",
+    ],
+    "mr_win": [
+        "fixcheckin",
+        "fixcheckout",
+        "payrollweek",
+        "payrollmonth",
+        "tonggio",
+        "canhdong",
+        "thieuca",
+        "scanthieuca",
+        "chotlich",
+        "duyetca",
+    ],
+    "mr_happy": [
+        "revenue",
+        "revenuelist",
+        "revenueweek",
+        "revenuemonth",
+        "revenuedashboard",
+        "expense",
+        "expenselist",
+        "pl",
+        "financeweek",
+        "financemonth",
+        "nhaphang",
+        "xuatkho",
+        "kiemkho",
+    ],
+    "miss_uyen": [
+        "paymentapprove",
+        "paymentreject",
+        "paymentpaid",
+    ],
+}
+
 
 def get_payment_worksheet():
     if not gs_client:
@@ -342,6 +458,25 @@ def build_payment_detail(record: Dict[str, Any]) -> str:
         f"🗒 Ghi chú: {record.get('Ghi chú', '') or 'Không có'}",
     ]
     return "\n".join(lines)
+
+
+def build_command_master_help() -> str:
+    lines = ["TF COMMAND MASTER LIST", ""]
+    for module_name, commands in COMMAND_MASTER_LIST.items():
+        lines.append(module_name)
+        lines.extend(f"/{command}" for command in commands)
+        lines.append("")
+
+    lines.extend(
+        [
+            "Đề nghị thanh toán",
+            "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG",
+            "/paymentdetail ID",
+            "/paymentreject ID Lý_do",
+            "/paymentreport week|month",
+        ]
+    )
+    return "\n".join(lines).strip()
 def normalize_days(days: str) -> List[int]:
     days = days.strip().lower()
     if days == "daily":
@@ -456,18 +591,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = str(update.effective_chat.id)
     DATA.setdefault("chats", {}).setdefault(chat_id, [])
     save_data(DATA)
-    await update.message.reply_text(
-        "Bot TF sẵn sàng.\n\n"
-        "Lệnh:\n"
-        "/addat <giờ> <ngày> <nội dung>\n"
-        "Ví dụ: /addat 06:38 mon,tue,wed Mở ca\n"
-        "/list\n/remove <số>\n/clear\n/now\n/help\n\n"
-        "Đề nghị thanh toán:\n"
-        "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
-        "/paymentlist\n/paymentdetail ID\n/paymentpending\n"
-        "/paymentapprove ID\n/paymentreject ID Lý_do\n/paymentpaid ID\n"
-        "/paymentreport week|month"
-    )
+    await update.message.reply_text(build_command_master_help())
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await start(update, context)
@@ -655,6 +779,129 @@ def staff_in_today_shift(chat_id: str, staff_name: str) -> bool:
             return True
 
     return False    
+
+
+async def process_attendance_command(update: Update, action: str, staff_name: str) -> None:
+    chat_id = str(update.effective_chat.id)
+    today_key = datetime.now(TZ).strftime("%Y-%m-%d")
+    now = datetime.now(TZ).strftime("%H:%M")
+    staff_name = staff_name.strip().title()
+    action = action.upper()
+
+    if not staff_name:
+        await update.message.reply_text(f"❌ Vui lòng ghi đúng: /{action.lower()} Tên")
+        return
+
+    staff_sheet = get_worksheet("00_Nhan_Vien")
+    staff_list = []
+    if staff_sheet:
+        staff_rows = staff_sheet.get_all_records()
+        for row in staff_rows:
+            name = str(row.get("Tên nhân viên", "")).strip().title()
+            status = str(row.get("Trạng thái", "")).strip().lower()
+            if name and status == "active":
+                staff_list.append(name)
+
+    unknown_staff = staff_name not in staff_list
+    if unknown_staff:
+        await update.message.reply_text(
+            f"⚠️ {staff_name} chưa có trong danh sách nhân viên.\n"
+            "Bot vẫn ghi tạm. Mr.Win cần kiểm tra và duyệt lại."
+        )
+
+    if action == "CHECKIN":
+        attendance_today = DATA.get("attendance", {}).get(chat_id, {}).get(today_key, {})
+        if (
+            staff_name in attendance_today
+            and attendance_today[staff_name].get("checkin")
+            and not attendance_today[staff_name].get("checkout")
+        ):
+            await update.message.reply_text(
+                f"⚠️ {staff_name} đang trong ca làm.\n"
+                "Vui lòng CHECKOUT trước."
+            )
+            return
+
+        DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
+        DATA["attendance"][chat_id][today_key][staff_name]["checkin"] = now
+        save_data(DATA)
+
+        if gs_client:
+            sheet = get_worksheet("01_Cham_Cong")
+            if sheet:
+                sheet.append_row(
+                    [
+                        datetime.now(TZ).strftime("%d/%m/%Y"),
+                        staff_name,
+                        now,
+                        "",
+                        "",
+                        "",
+                        "Tên chưa duyệt" if unknown_staff else "",
+                    ],
+                    value_input_option="RAW",
+                    insert_data_option="INSERT_ROWS",
+                )
+
+        await update.message.reply_text(f"✅ Đã ghi nhận CHECKIN: {staff_name} lúc {now}")
+        return
+
+    DATA.setdefault("attendance", {}).setdefault(chat_id, {}).setdefault(today_key, {}).setdefault(staff_name, {})
+    DATA["attendance"][chat_id][today_key][staff_name]["checkout"] = now
+    save_data(DATA)
+
+    if gs_client:
+        sheet = get_worksheet("01_Cham_Cong")
+        if sheet:
+            records = sheet.get_all_records()
+            for idx in range(len(records) - 1, -1, -1):
+                row = records[idx]
+                i = idx + 2
+                if (
+                    row["Ngày"] == datetime.now(TZ).strftime("%d/%m/%Y")
+                    and str(row["Nhân viên"]).strip().lower() == staff_name.lower()
+                    and not str(row.get("Checkout", "")).strip()
+                ):
+                    sheet.update_cell(i, 4, now)
+                    checkin_time = datetime.strptime(row["Checkin"], "%H:%M")
+                    checkout_time = datetime.strptime(now, "%H:%M")
+                    total_hours = round((checkout_time - checkin_time).seconds / 3600, 2)
+                    sheet.format("E:E", {
+                        "numberFormat": {
+                            "type": "NUMBER",
+                            "pattern": "0.00",
+                        }
+                    })
+                    sheet.update(f"E{i}", [[float(total_hours)]], value_input_option="RAW")
+                    total_minutes = int((checkout_time - checkin_time).seconds / 60)
+                    hours = total_minutes // 60
+                    minutes = total_minutes % 60
+                    if hours > 0 and minutes > 0:
+                        duration_text = f"{hours} giờ {minutes} phút"
+                    elif hours > 0:
+                        duration_text = f"{hours} giờ"
+                    else:
+                        duration_text = f"{minutes} phút"
+                    sheet.update_cell(i, 6, duration_text)
+                    break
+
+    await update.message.reply_text(f"✅ Đã ghi nhận CHECKOUT: {staff_name} lúc {now}")
+
+
+async def checkin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await update.message.reply_text("❌ Cách dùng: /checkin Tên")
+        return
+    await process_attendance_command(update, "CHECKIN", " ".join(context.args))
+
+
+async def checkout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await update.message.reply_text("❌ Cách dùng: /checkout Tên")
+        return
+    await process_attendance_command(update, "CHECKOUT", " ".join(context.args))
+
+
 async def handle_done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     kho_ws = None
     if not update.message or not update.message.text:
@@ -3300,17 +3547,16 @@ async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             PAYMENT_STATUS_REJECTED: 0,
             PAYMENT_STATUS_PAID: 0,
         }
+        total_amount = 0
         paid_total = 0
 
         for record in records:
             status = str(record.get("Trạng thái", "")).strip()
             if status in counts:
                 counts[status] += 1
+            total_amount += payment_amount_from_record(record)
             if status == PAYMENT_STATUS_PAID:
-                try:
-                    paid_total += int(str(record.get("Số tiền", "0")).replace(".", "").replace(",", "").strip() or 0)
-                except Exception:
-                    pass
+                paid_total += payment_amount_from_record(record)
 
         approved_total = counts[PAYMENT_STATUS_APPROVED] + counts[PAYMENT_STATUS_PAID]
 
@@ -3318,6 +3564,7 @@ async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             title,
             "",
             f"Tổng số đề nghị: {len(records)}",
+            f"Tổng tiền: {format_vnd(total_amount)}",
             f"⏳ Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
             f"✅ Đã duyệt: {approved_total}",
             f"❌ Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
@@ -5328,6 +5575,8 @@ def main() -> None:
     app.add_handler(CommandHandler("now", now_cmd))
     app.add_handler(CommandHandler("report", report_cmd))
     app.add_handler(CommandHandler("todaywork", todaywork_cmd))
+    app.add_handler(CommandHandler("checkin", checkin_cmd))
+    app.add_handler(CommandHandler("checkout", checkout_cmd))
     app.add_handler(CommandHandler("timesheet", timesheet_cmd))     
     app.add_handler(CommandHandler("payrollweek", payrollweek_cmd))
     app.add_handler(CommandHandler("payrollmonth", payrollmonth_cmd))
