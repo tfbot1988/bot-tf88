@@ -463,17 +463,29 @@ def build_payment_detail(record: Dict[str, Any]) -> str:
 def build_command_master_help() -> str:
     lines = ["TF COMMAND MASTER LIST", ""]
     for module_name, commands in COMMAND_MASTER_LIST.items():
+        if module_name == "Đề nghị thanh toán":
+            continue
         lines.append(module_name)
         lines.extend(f"/{command}" for command in commands)
         lines.append("")
 
     lines.extend(
         [
-            "Đề nghị thanh toán",
-            "/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG",
-            "/paymentdetail ID",
-            "/paymentreject ID Lý_do",
-            "/paymentreport week|month",
+            "📋 ĐỀ NGHỊ THANH TOÁN",
+            "",
+            "/paymentrequest <Loại> <Số tiền> <Nội dung>",
+            "",
+            "Ví dụ:",
+            "/paymentrequest KHO 100000 Mua ly giấy",
+            "",
+            "/paymentlist",
+            "/paymentdetail <ID>",
+            "/paymentpending",
+            "/paymentapprove <ID>",
+            "/paymentreject <ID> <Lý do>",
+            "/paymentpaid <ID>",
+            "/paymentreport week",
+            "/paymentreport month",
         ]
     )
     return "\n".join(lines).strip()
