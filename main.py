@@ -3216,14 +3216,16 @@ async def paymentreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception:
                     pass
 
+        approved_total = counts[PAYMENT_STATUS_APPROVED] + counts[PAYMENT_STATUS_PAID]
+
         lines = [
             title,
             "",
             f"Tổng số đề nghị: {len(records)}",
-            f"Tổng đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
-            f"Tổng đã duyệt: {counts[PAYMENT_STATUS_APPROVED]}",
-            f"Tổng đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
-            f"Tổng đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
+            f"Đang chờ duyệt: {counts[PAYMENT_STATUS_PENDING]}",
+            f"Đã duyệt: {approved_total}",
+            f"Đã từ chối: {counts[PAYMENT_STATUS_REJECTED]}",
+            f"Đã thanh toán: {counts[PAYMENT_STATUS_PAID]}",
             f"Tổng tiền đã thanh toán: {format_vnd(paid_total)}",
         ]
         await update.message.reply_text("\n".join(lines))
