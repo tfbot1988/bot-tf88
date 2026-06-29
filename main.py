@@ -2964,6 +2964,10 @@ async def plmonth_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))                           
 
 async def paymentrequest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not can_create_payment(update):
+        await update.message.reply_text(PAYMENT_PERMISSION_DENIED)
+        return
+
     if len(context.args) < 3:
         await update.message.reply_text(
             "Cú pháp:\n/paymentrequest LOAI_CHI_PHI SO_TIEN NOI_DUNG\n"
