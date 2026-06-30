@@ -1,0 +1,96 @@
+start - Khởi động bot và xem danh sách lệnh
+getchatid - Xem Telegram chat ID hiện tại
+linkshiftgroup - Liên kết nhóm lấy lịch xếp ca
+help - Xem hướng dẫn sử dụng bot
+addat - Thêm lịch nhắc vận hành theo giờ
+list - Xem danh sách lịch nhắc
+remove - Xóa một lịch nhắc
+clear - Xóa toàn bộ lịch nhắc
+tonkho - Xem tồn kho
+khohelp - Xem hướng dẫn module kho
+nhaphang - Gửi mẫu nhập hàng
+thieuhang - Gửi mẫu báo thiếu hàng
+xuatkho - Gửi mẫu xuất kho
+kiemkho - Gửi mẫu kiểm kho
+baocaokho - Gửi mẫu báo cáo kho ngày
+baocaokhotuan - Gửi mẫu báo cáo kho tuần
+now - Xem lịch nhắc hiện tại
+report - Xem báo cáo vận hành hôm nay
+todaywork - Xem công việc và ca hôm nay
+checkin - Chấm công vào ca
+checkout - Chấm công ra ca
+timesheet - Xem bảng chấm công
+payrollweek - Xem bảng lương tuần
+payrollmonth - Xem bảng lương tháng
+payrollfinal - Chốt lương cuối kỳ
+payrolllock - Khóa bảng lương
+payrollunlock - Mở khóa bảng lương
+payslip - Xem phiếu lương nhân viên
+clearattendance - Xóa dữ liệu chấm công
+salarytype - Cấu hình loại lương nhân viên
+sethourly - Cấu hình lương theo giờ
+fixedsalary - Cấu hình lương cố định
+bonus - Thêm thưởng nhân viên
+bonusremove - Xóa thưởng nhân viên
+advance - Ghi nhận ứng lương
+fine - Thêm khoản phạt
+fineremove - Xóa khoản phạt
+finelist - Xem danh sách khoản phạt
+resetpayroll - Reset dữ liệu lương
+salarylist - Xem danh sách cấu hình lương
+payrollsummary - Tổng hợp bảng lương
+payrollexport - Xuất dữ liệu bảng lương
+fixcheckin - Sửa giờ checkin
+fixcheckout - Sửa giờ checkout
+addmonthly - Thêm lịch nhắc hằng tháng
+monthlylist - Xem lịch nhắc hằng tháng
+removemonthly - Xóa lịch nhắc hằng tháng
+addlunar - Thêm lịch nhắc âm lịch
+lunarlist - Xem lịch nhắc âm lịch
+removelunar - Xóa lịch nhắc âm lịch
+addbirthday - Thêm lịch nhắc sinh nhật
+birthdaylist - Xem lịch nhắc sinh nhật
+removebirthday - Xóa lịch nhắc sinh nhật
+checkshift - Kiểm tra lệch lịch ca và chấm công
+staffadd - Thêm nhân viên
+staffremove - Xóa nhân viên
+stafflist - Xem danh sách nhân viên
+revenue - Ghi nhận doanh thu
+revenuelist - Xem danh sách doanh thu
+revenueweek - Báo cáo doanh thu tuần
+revenuemonth - Báo cáo doanh thu tháng
+revenuedashboard - Xem dashboard doanh thu
+income - Ghi nhận khoản thu
+expense - Ghi nhận chi phí
+thu - Xem danh sách khoản thu
+expenselist - Xem danh sách chi phí
+pl - Xem báo cáo P/L
+financeweek - Xem báo cáo tài chính tuần
+financemonth - Xem báo cáo tài chính tháng
+resetfinance - Reset dữ liệu tài chính
+plmonth - Xem báo cáo P/L tháng
+paymentrequest - Tạo đề nghị thanh toán
+paymentlist - Xem danh sách đề nghị thanh toán
+paymentdetail - Xem chi tiết đề nghị thanh toán
+paymentpending - Xem đề nghị đang chờ duyệt
+paymentapprove - Duyệt đề nghị thanh toán
+paymentreject - Từ chối đề nghị thanh toán
+paymentpaid - Xác nhận đã thanh toán
+paymentreport - Báo cáo đề nghị thanh toán
+shift - Xếp ca nhanh
+week - Xem tuần làm việc
+ranh - Đăng ký lịch rảnh
+checkranh - Xem lịch rảnh
+xepca - Xếp ca tuần
+lich - Xem lịch làm việc
+xoaca - Xóa ca làm
+tonggio - Tổng hợp giờ làm
+thieuca - Xem ca còn thiếu người
+doica - Đổi ca làm
+duyetca - Duyệt ca làm
+scanthieuca - Quét ca thiếu người
+chotlich - Chốt lịch làm việc
+canhan - Xem lịch cá nhân
+nhanvien - Xem danh sách nhân viên xếp ca
+canhdong - Báo cáo cân đồng
+clearshift - Xóa lịch ca
