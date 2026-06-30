@@ -109,12 +109,14 @@ async def auto_sync_telegram_commands(application: Application) -> None:
     try:
         commands = load_botfather_commands()
     except Exception as exc:
-        log.warning("Skip Telegram command sync: %s", exc)
+        log.warning("WARNING: Không thể đọc Telegram commands từ %s: %s", COMMANDS_FILE, exc)
         return
 
     if not commands:
-        log.warning("Skip Telegram command sync: %s không có command.", COMMANDS_FILE)
+        log.warning("WARNING: Không sync Telegram commands vì %s không có command.", COMMANDS_FILE)
         return
+
+    log.info("Auto sync Telegram commands: đọc được %s command từ %s", len(commands), COMMANDS_FILE)
 
     scopes = [
         ("Default", BotCommandScopeDefault()),
@@ -126,9 +128,9 @@ async def auto_sync_telegram_commands(application: Application) -> None:
     for scope_name, scope in scopes:
         try:
             await application.bot.set_my_commands(commands, scope=scope)
-            log.info("Synced %s Telegram commands for scope %s", len(commands), scope_name)
+            log.info("Auto sync Telegram commands: scope %s thành công (%s command)", scope_name, len(commands))
         except Exception as exc:
-            log.warning("Telegram command sync failed for scope %s: %s", scope_name, exc)
+            log.warning("WARNING: Auto sync Telegram commands lỗi ở scope %s: %s", scope_name, exc)
 
 DATA = load_data()
 PAYROLL_LOCK = {}
