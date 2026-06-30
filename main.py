@@ -12,7 +12,14 @@ from typing import Dict, List, Any, Optional
 import gspread
 from google.oauth2.service_account import Credentials
 
-from telegram import Update
+from telegram import (
+    BotCommand,
+    BotCommandScopeAllChatAdministrators,
+    BotCommandScopeAllGroupChats,
+    BotCommandScopeAllPrivateChats,
+    BotCommandScopeDefault,
+    Update,
+)
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -32,6 +39,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 TZ_NAME = os.getenv("TZ", "Asia/Ho_Chi_Minh")
 TZ = ZoneInfo(TZ_NAME)
 DATA_FILE = Path(os.getenv("DATA_FILE", "/app/data/data.json"))
+COMMANDS_FILE = Path(__file__).resolve().parent / "docs" / "BOTFATHER_COMMANDS.txt"
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -67,6 +75,60 @@ def load_data() -> Dict[str, Any]:
 
 def save_data(data: Dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_botfather_commands() -> List[BotCommand]:
+    commands = []
+    seen = set()
+
+    for line_number, raw_line in enumerate(COMMANDS_FILE.read_text(encoding="utf-8").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        if " - " not in line:
+            raise ValueError(f"Dòng {line_number} sai định dạng: {raw_line}")
+
+        command, description = line.split(" - ", 1)
+        command = command.strip().lstrip("/")
+        description = description.strip()
+
+        if not command:
+            raise ValueError(f"Dòng {line_number} thiếu command.")
+        if not description:
+            raise ValueError(f"Dòng {line_number} thiếu mô tả.")
+        if command in seen:
+            raise ValueError(f"Command bị trùng: {command}")
+
+        seen.add(command)
+        commands.append(BotCommand(command=command, description=description))
+
+    return commands
+
+
+async def auto_sync_telegram_commands(application: Application) -> None:
+    try:
+        commands = load_botfather_commands()
+    except Exception as exc:
+        log.warning("Skip Telegram command sync: %s", exc)
+        return
+
+    if not commands:
+        log.warning("Skip Telegram command sync: %s không có command.", COMMANDS_FILE)
+        return
+
+    scopes = [
+        ("Default", BotCommandScopeDefault()),
+        ("AllPrivateChats", BotCommandScopeAllPrivateChats()),
+        ("AllGroupChats", BotCommandScopeAllGroupChats()),
+        ("AllChatAdministrators", BotCommandScopeAllChatAdministrators()),
+    ]
+
+    for scope_name, scope in scopes:
+        try:
+            await application.bot.set_my_commands(commands, scope=scope)
+            log.info("Synced %s Telegram commands for scope %s", len(commands), scope_name)
+        except Exception as exc:
+            log.warning("Telegram command sync failed for scope %s: %s", scope_name, exc)
 
 DATA = load_data()
 PAYROLL_LOCK = {}
@@ -5580,7 +5642,7 @@ async def baocaokhotuan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 def main() -> None:
     if not TOKEN:
         raise RuntimeError("Thiếu BOT_TOKEN. Hãy thêm biến môi trường BOT_TOKEN trên Render.")
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).post_init(auto_sync_telegram_commands).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("getchatid", getchatid_cmd))
     app.add_handler(CommandHandler("linkshiftgroup", linkshiftgroup_cmd))
